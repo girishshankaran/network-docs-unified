@@ -18,7 +18,7 @@ lifecycle:
   deprecated_in: null
   status: active
   replaced_by: null
-  applies_to: ["21.0"]
+  applies_to: ["18.0"]
 retrieval:
   is_canonical: true
   dedupe_key: "configure-alerts-in-your-routers"
