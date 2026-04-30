@@ -4,6 +4,7 @@ topics:
   - NET-SSH-TASK-001
   - NET-PROXY-TASK-001
   - NET-DHCP-TASK-001
+  - NET-TROUBLESHOOTING-ROUTER-TASK-001
   - NET-CONFIGURE-ALERTS-ROUTERS-TASK-001
   - NET-CREATE-PUBLISH-API-TASK-001
   - NET-AUTHENTICATE-USERS-TASK-001
@@ -19,6 +20,9 @@ sections:
   - id: dhcp
     title: DHCP
     topics: ["NET-DHCP-TASK-001"]
+  - id: troubleshooting
+    title: Troubleshooting
+    topics: ["NET-TROUBLESHOOTING-ROUTER-TASK-001"]
   - id: alerts
     title: Alerts
     topics: ["NET-CONFIGURE-ALERTS-ROUTERS-TASK-001"]
