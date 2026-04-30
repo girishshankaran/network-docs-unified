@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Canonical topic frontmatter",
+  "type": "object",
+  "required": ["topic_id", "title", "lifecycle", "retrieval"],
+  "properties": {
+    "topic_id": { "type": "string" },
+    "title": { "type": "string" },
+    "lifecycle": { "type": "object" },
+    "retrieval": { "type": "object" }
+  }
+}

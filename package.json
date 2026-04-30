@@ -1,0 +1,13 @@
+{
+  "name": "network-docs-unified",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Single-repository documentation publishing prototype with canonical topics and release assembly.",
+  "scripts": {
+    "validate": "node scripts/validate-content.js && node scripts/validate-release-assets.js .",
+    "suggest": "node scripts/suggest-release-updates.js .",
+    "impact": "node scripts/detect-impacted-releases.js .",
+    "build": "node scripts/build-site.js .",
+    "build:release": "node scripts/build-site.js . --releases"
+  }
+}

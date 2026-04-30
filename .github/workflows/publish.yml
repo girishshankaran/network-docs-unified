@@ -1,0 +1,101 @@
+name: Impact Publish
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      has_impacts: ${{ steps.impact.outputs.has_impacts }}
+      impacted_releases: ${{ steps.impact.outputs.impacted_releases }}
+      publish_tag: ${{ steps.publish_tag.outputs.tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - name: Validate content and release assembly
+        run: npm run validate
+
+      - name: Detect impacted release outputs
+        id: impact
+        shell: bash
+        run: |
+          set -euo pipefail
+          zero_sha="0000000000000000000000000000000000000000"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            node scripts/detect-impacted-releases.js . --all
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            node scripts/detect-impacted-releases.js . --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}"
+          elif [ "${{ github.event.before }}" = "$zero_sha" ]; then
+            node scripts/detect-impacted-releases.js . --all
+          else
+            node scripts/detect-impacted-releases.js . --base "${{ github.event.before }}" --head "${{ github.sha }}"
+          fi
+
+      - name: Build full Pages site
+        if: steps.impact.outputs.has_impacts == 'true'
+        run: |
+          echo "Impacted release outputs: ${{ steps.impact.outputs.impacted_releases }}"
+          node scripts/build-site.js .
+
+      - name: Upload Pages artifact
+        if: steps.impact.outputs.has_impacts == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Compute publish tag
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && steps.impact.outputs.has_impacts == 'true'
+        id: publish_tag
+        env:
+          IMPACTED_RELEASES: ${{ steps.impact.outputs.impacted_releases }}
+        run: node scripts/publish-tag-name.js
+
+  deploy:
+    if: github.event_name != 'pull_request' && needs.build.outputs.has_impacts == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  tag-publish:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.build.outputs.has_impacts == 'true'
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Tag publish snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ needs.build.outputs.publish_tag }}" "${{ github.sha }}" -m "Publish snapshot for ${{ needs.build.outputs.impacted_releases }}"
+          git push origin "${{ needs.build.outputs.publish_tag }}"

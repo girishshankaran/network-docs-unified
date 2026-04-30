@@ -1,0 +1,21 @@
+book_id: router-admin-guide
+title: Router Administration Guide
+topics:
+  - NET-SSH-TASK-001
+  - NET-GENERATE-SSH-KEYS-TASK-001
+  - NET-MIGRATING-NEW-VERSION-ROUTERS-TASK-001
+  - NET-IOSXR-DEPLOY-TASK-001
+  - NET-DELETE-CONFIG-TASK-001
+sections:
+  - id: access
+    title: Access
+    topics: ["NET-SSH-TASK-001", "NET-GENERATE-SSH-KEYS-TASK-001"]
+  - id: migration
+    title: Migration
+    topics: ["NET-MIGRATING-NEW-VERSION-ROUTERS-TASK-001"]
+  - id: deployment
+    title: Deployment
+    topics: ["NET-IOSXR-DEPLOY-TASK-001"]
+  - id: cleanup
+    title: Cleanup
+    topics: ["NET-DELETE-CONFIG-TASK-001"]

@@ -1,0 +1,36 @@
+book_id: router-admin-guide
+title: Router Administration Guide
+topics:
+  - NET-SSH-TASK-001
+  - NET-PROXY-TASK-001
+  - NET-DHCP-TASK-001
+  - NET-CONFIGURE-ALERTS-ROUTERS-TASK-001
+  - NET-CREATE-PUBLISH-API-TASK-001
+  - NET-AUTHENTICATE-USERS-TASK-001
+  - NET-SWITCH-AUTHENTICATION-TASK-001
+  - NET-MIGRATING-NEW-VERSION-ROUTERS-TASK-001
+sections:
+  - id: access
+    title: Access
+    topics: ["NET-SSH-TASK-001"]
+  - id: proxy
+    title: Proxy
+    topics: ["NET-PROXY-TASK-001"]
+  - id: dhcp
+    title: DHCP
+    topics: ["NET-DHCP-TASK-001"]
+  - id: alerts
+    title: Alerts
+    topics: ["NET-CONFIGURE-ALERTS-ROUTERS-TASK-001"]
+  - id: publish
+    title: Publish
+    topics: ["NET-CREATE-PUBLISH-API-TASK-001"]
+  - id: authenticate
+    title: Authenticate
+    topics: ["NET-AUTHENTICATE-USERS-TASK-001"]
+  - id: authenticate-switch
+    title: Authenticate switch
+    topics: ["NET-SWITCH-AUTHENTICATION-TASK-001"]
+  - id: migration
+    title: Migration
+    topics: ["NET-MIGRATING-NEW-VERSION-ROUTERS-TASK-001"]
