@@ -29,6 +29,7 @@ const topicsDir = path.join(repoRoot, "topics");
 const releasesDir = path.join(repoRoot, "releases");
 const topicIdPattern = /^[A-Z0-9]+(?:-[A-Z0-9]+)*-(TASK|CONCEPT|REFERENCE)-\d{3}$/;
 const sectionIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const versionPattern = "\\d+(?:\\.\\d+)+";
 
 function relative(filePath) {
   return path.relative(process.cwd(), filePath) || ".";
@@ -142,10 +143,14 @@ function parseYaml(source) {
   return parseYamlBlock(source.split("\n"), 0, 0).value;
 }
 
-function parseFrontmatter(source) {
+function parseTopicDocument(source) {
   const match = source.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!match) throw new Error("Missing frontmatter");
-  return parseYaml(match[1]);
+  return {
+    frontmatter: parseYaml(match[1]),
+    body: match[2],
+    bodyStartLine: match[1].split(/\r?\n/).length + 3,
+  };
 }
 
 function readYaml(filePath) {
@@ -164,8 +169,13 @@ function loadTopics(issues) {
   for (const fileName of topicFiles) {
     const fullPath = path.join(topicsDir, fileName);
     let frontmatter;
+    let body;
+    let bodyStartLine;
     try {
-      frontmatter = parseFrontmatter(fs.readFileSync(fullPath, "utf8"));
+      const topicDocument = parseTopicDocument(fs.readFileSync(fullPath, "utf8"));
+      frontmatter = topicDocument.frontmatter;
+      body = topicDocument.body;
+      bodyStartLine = topicDocument.bodyStartLine;
     } catch (error) {
       issues.push(`${relative(fullPath)}: ${error.message}`);
       continue;
@@ -184,14 +194,196 @@ function loadTopics(issues) {
       continue;
     }
 
+    const appliesTo = frontmatter.lifecycle?.applies_to;
     topics.set(topicId, {
       path: fullPath,
       title: frontmatter.title || topicId,
-      appliesTo: frontmatter.lifecycle?.applies_to || [],
+      appliesTo: Array.isArray(appliesTo) ? appliesTo : [],
+      rawAppliesTo: appliesTo,
+      body,
+      bodyStartLine,
     });
   }
 
   return topics;
+}
+
+function compareVersions(left, right) {
+  const leftParts = left.split(".").map(Number);
+  const rightParts = right.split(".").map(Number);
+  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
+    const leftValue = leftParts[index] || 0;
+    const rightValue = rightParts[index] || 0;
+    if (leftValue < rightValue) return -1;
+    if (leftValue > rightValue) return 1;
+  }
+  return 0;
+}
+
+function releaseMatchesRange(release, range) {
+  if (range.endsWith("+")) return compareVersions(release, range.slice(0, -1)) >= 0;
+  if (range.includes("-")) {
+    const [start, end] = range.split("-");
+    return compareVersions(release, start) >= 0 && compareVersions(release, end) <= 0;
+  }
+  return release === range;
+}
+
+function parseVersionRange(range) {
+  if (!range) {
+    return { error: 'expected a non-empty range, such as "19.0", "20.0+", or "19.0-21.0"' };
+  }
+
+  const exactMatch = range.match(new RegExp(`^${versionPattern}$`));
+  if (exactMatch) {
+    return { endpoints: [range] };
+  }
+
+  const openEndedMatch = range.match(new RegExp(`^(${versionPattern})\\+$`));
+  if (openEndedMatch) {
+    return { endpoints: [openEndedMatch[1]] };
+  }
+
+  const closedRangeMatch = range.match(new RegExp(`^(${versionPattern})-(${versionPattern})$`));
+  if (closedRangeMatch) {
+    const [, start, end] = closedRangeMatch;
+    if (compareVersions(start, end) > 0) {
+      return { error: `range start "${start}" must be less than or equal to range end "${end}"` };
+    }
+    return { endpoints: [start, end] };
+  }
+
+  return { error: 'expected range syntax "19.0", "20.0+", or "19.0-21.0"' };
+}
+
+function findVersionBlocks(topic) {
+  const blocks = [];
+  const lines = topic.body.split(/\r?\n/);
+  let fenced = false;
+  let fenceMarker = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+    const fenceMatch = trimmed.match(/^(```|~~~)/);
+    if (fenceMatch) {
+      const marker = fenceMatch[1];
+      if (!fenced) {
+        fenced = true;
+        fenceMarker = marker;
+      } else if (marker === fenceMarker) {
+        fenced = false;
+        fenceMarker = null;
+      }
+      continue;
+    }
+    if (fenced) continue;
+    if (!trimmed.startsWith(":::version")) continue;
+
+    const lineNumber = topic.bodyStartLine + index;
+    const block = { lineNumber };
+    if (line !== trimmed) {
+      block.issue = "version block opening marker must not be indented";
+      blocks.push(block);
+      continue;
+    }
+
+    const match = line.match(/^:::version\s+range="([^"]*)"\s*$/);
+    if (!match) {
+      block.issue = 'version block opening marker must use syntax :::version range="19.0"';
+      blocks.push(block);
+      continue;
+    }
+
+    const closingIndex = lines.findIndex((candidate, candidateIndex) => candidateIndex > index && candidate === ":::");
+    if (closingIndex === -1) {
+      block.issue = "version block is missing a closing ::: marker";
+      block.range = match[1];
+      blocks.push(block);
+      continue;
+    }
+
+    block.range = match[1];
+    blocks.push(block);
+    index = closingIndex;
+  }
+
+  return blocks;
+}
+
+function validateVersionBlocks(topics, releaseNames, issues) {
+  const knownReleaseSet = new Set(releaseNames);
+  const knownReleaseList = releaseNames.join(", ");
+
+  for (const topic of topics.values()) {
+    const appliesTo = Array.isArray(topic.appliesTo) ? topic.appliesTo : [];
+    const appliesToSet = new Set(appliesTo);
+
+    for (const block of findVersionBlocks(topic)) {
+      const label = `${relative(topic.path)}:${block.lineNumber}`;
+      if (block.issue) {
+        issues.push(`${label}: ${block.issue}`);
+        continue;
+      }
+
+      const parsedRange = parseVersionRange(block.range);
+      if (parsedRange.error) {
+        issues.push(`${label}: invalid version range "${block.range}": ${parsedRange.error}`);
+        continue;
+      }
+
+      const matchingReleases = releaseNames.filter((releaseName) => releaseMatchesRange(releaseName, block.range));
+      if (matchingReleases.length === 0) {
+        issues.push(`${label}: version range "${block.range}" does not match any known release (${knownReleaseList})`);
+        continue;
+      }
+
+      const unknownEndpoints = parsedRange.endpoints.filter((endpoint) => !knownReleaseSet.has(endpoint));
+      if (unknownEndpoints.length > 0) {
+        issues.push(`${label}: version range "${block.range}" uses unknown endpoint(s) ${unknownEndpoints.join(", ")}; known releases are ${knownReleaseList}`);
+      }
+
+      const outsideApplicability = matchingReleases.filter((releaseName) => !appliesToSet.has(releaseName));
+      if (outsideApplicability.length > 0) {
+        issues.push(`${label}: version range "${block.range}" includes release(s) ${outsideApplicability.join(", ")} outside lifecycle.applies_to [${appliesTo.join(", ")}]`);
+      }
+    }
+  }
+}
+
+function validateTopicApplicability(topics, releaseNames, issues) {
+  const knownReleaseSet = new Set(releaseNames);
+  const knownReleaseList = releaseNames.join(", ");
+  const releaseValuePattern = new RegExp(`^${versionPattern}$`);
+
+  for (const topic of topics.values()) {
+    const label = `${relative(topic.path)} lifecycle.applies_to`;
+    if (!Array.isArray(topic.rawAppliesTo)) {
+      issues.push(`${label}: expected an array of known release names (${knownReleaseList})`);
+      continue;
+    }
+    if (topic.rawAppliesTo.length === 0) {
+      issues.push(`${label}: must include at least one known release (${knownReleaseList})`);
+      continue;
+    }
+
+    const seen = new Set();
+    for (const releaseName of topic.rawAppliesTo) {
+      if (typeof releaseName !== "string" || !releaseValuePattern.test(releaseName)) {
+        issues.push(`${label}: invalid release value "${releaseName}"; expected a release like "19.0"`);
+        continue;
+      }
+      if (seen.has(releaseName)) {
+        issues.push(`${label}: duplicate release "${releaseName}"`);
+        continue;
+      }
+      seen.add(releaseName);
+
+      if (!knownReleaseSet.has(releaseName)) {
+        issues.push(`${label}: unknown release "${releaseName}"; known releases are ${knownReleaseList}`);
+      }
+    }
+  }
 }
 
 function requireArray(value, label, issues) {
@@ -293,11 +485,12 @@ function main() {
   const issues = [];
   const topics = loadTopics(issues);
   const latestReleases = [];
+  let releaseNames = [];
 
   if (!fs.existsSync(releasesDir)) {
     issues.push(`releases directory not found: ${relative(releasesDir)}`);
   } else {
-    const releaseNames = fs.readdirSync(releasesDir)
+    releaseNames = fs.readdirSync(releasesDir)
       .filter((entryName) => fs.statSync(path.join(releasesDir, entryName)).isDirectory())
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
@@ -335,6 +528,9 @@ function main() {
       if (metadata.latest === true) latestReleases.push(releaseName);
     }
   }
+
+  validateTopicApplicability(topics, releaseNames, issues);
+  validateVersionBlocks(topics, releaseNames, issues);
 
   if (latestReleases.length !== 1) {
     issues.push(`exactly one release must have latest: true; found ${latestReleases.length}`);
