@@ -1,6 +1,9 @@
 book_id: router-admin-guide
 title: Router Administration Guide
 sections:
+  - id: overview
+    title: Overview
+    topics: ["NET-WHATS-NEW-CONCEPT-001"]
   - id: access
     title: Access
     topics: ["NET-SSH-TASK-001", "NET-GENERATE-SSH-KEYS-TASK-001"]
