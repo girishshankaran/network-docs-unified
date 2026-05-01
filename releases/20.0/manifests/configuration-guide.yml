@@ -4,9 +4,15 @@ sections:
   - id: access
     title: Access configuration
     topics: ["NET-SSH-TASK-001", "NET-GENERATE-SSH-KEYS-TASK-001"]
+  - id: interfaces
+    title: Interface configuration
+    topics: ["NET-INTERFACE-DESCRIPTION-TASK-001"]
+  - id: routing
+    title: Routing configuration
+    topics: ["NET-STATIC-ROUTES-TASK-001"]
   - id: network-services
     title: Network services
-    topics: ["NET-PROXY-TASK-001"]
+    topics: ["NET-PROXY-TASK-001", "NET-NTP-TASK-001"]
   - id: lifecycle
     title: Lifecycle configuration
     topics: ["NET-UPGRADE-TASK-001", "NET-IOSXR-DEPLOY-TASK-001"]
