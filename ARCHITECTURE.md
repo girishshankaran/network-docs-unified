@@ -10,7 +10,9 @@ network-docs-unified/
   schemas/
   releases/
     19.0/
-      manifests/book.yml
+      manifests/
+        admin-guide.yml
+        configuration-guide.yml
       assets/release-metadata.yml
     20.0/
     21.0/
@@ -28,7 +30,7 @@ network-docs-unified/
 
 `releases/<version>/` owns release assembly. Each release has:
 
-- `manifests/book.yml`, whose sections list included topic IDs and define the table of contents structure.
+- `manifests/*.yml`, where each file is one guide with a stable `book_id`, title, sections, and topic order.
 - `assets/release-metadata.yml`, which defines display name, publish path, status, and latest flag.
 
 `scripts/` owns validation, impact detection, and static output generation.
@@ -37,10 +39,12 @@ network-docs-unified/
 
 A topic appears in a release only when both conditions are true:
 
-1. `releases/<version>/manifests/book.yml` includes the topic ID in a section.
+1. Any guide manifest under `releases/<version>/manifests/` includes the topic ID in a section.
 2. The topic frontmatter includes the release in `lifecycle.applies_to`.
 
 This preserves canonical reuse while allowing each release to decide its own assembled navigation.
+
+`admin-guide.yml` is the default guide manifest for a release. It continues to publish at the release root, such as `/20.0/`, so existing release URLs remain stable. Additional guide manifests publish under their `book_id`, such as `/20.0/configuration-guide/`.
 
 ## Impact-Based Publishing
 
@@ -49,7 +53,7 @@ After a merge to `main`, the workflow compares the changed files and computes im
 ```text
 topics/<slug>.md
   -> find topic_id
-  -> find release manifests with sections that include that topic_id
+  -> find release guide manifests with sections that include that topic_id
   -> intersect with lifecycle.applies_to
   -> rebuild those release outputs
 
@@ -91,7 +95,8 @@ Cloud or latest-only products can use the same structure with a single release a
 
 ```text
 releases/latest/
-  manifests/book.yml
+  manifests/
+    admin-guide.yml
   assets/release-metadata.yml
 ```
 

@@ -29,7 +29,9 @@ const topicsDir = path.join(repoRoot, "topics");
 const releasesDir = path.join(repoRoot, "releases");
 const topicIdPattern = /^[A-Z0-9]+(?:-[A-Z0-9]+)*-(TASK|CONCEPT|REFERENCE)-\d{3}$/;
 const sectionIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const bookIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const versionPattern = "\\d+(?:\\.\\d+)+";
+const defaultManifestFile = "admin-guide.yml";
 
 function relative(filePath) {
   return path.relative(process.cwd(), filePath) || ".";
@@ -417,6 +419,8 @@ function validateMetadata(releaseName, metadata, metadataPath, issues) {
 function validateManifest(releaseName, manifest, manifestPath, topics, issues) {
   if (!manifest.book_id) {
     issues.push(`${relative(manifestPath)}: missing book_id`);
+  } else if (!bookIdPattern.test(manifest.book_id)) {
+    issues.push(`${relative(manifestPath)}: book_id "${manifest.book_id}" must use lowercase kebab-case`);
   }
   if (!manifest.title) {
     issues.push(`${relative(manifestPath)}: missing title`);
@@ -461,6 +465,18 @@ function validateManifest(releaseName, manifest, manifestPath, topics, issues) {
   }
 }
 
+function manifestFilesForRelease(releaseRoot) {
+  const manifestsDir = path.join(releaseRoot, "manifests");
+  if (!fs.existsSync(manifestsDir)) return [];
+  return fs.readdirSync(manifestsDir)
+    .filter((fileName) => fileName.endsWith(".yml") || fileName.endsWith(".yaml"))
+    .sort((left, right) => {
+      if (left === defaultManifestFile) return -1;
+      if (right === defaultManifestFile) return 1;
+      return left.localeCompare(right);
+    });
+}
+
 function main() {
   const issues = [];
   const topics = loadTopics(issues);
@@ -476,26 +492,21 @@ function main() {
 
     for (const releaseName of releaseNames) {
       const releaseRoot = path.join(releasesDir, releaseName);
-      const manifestPath = path.join(releaseRoot, "manifests", "book.yml");
+      const manifestsDir = path.join(releaseRoot, "manifests");
+      const manifestFiles = manifestFilesForRelease(releaseRoot);
       const metadataPath = path.join(releaseRoot, "assets", "release-metadata.yml");
 
-      if (!fs.existsSync(manifestPath)) {
-        issues.push(`${relative(releaseRoot)}: missing manifests/book.yml`);
-        continue;
+      if (!fs.existsSync(manifestsDir)) {
+        issues.push(`${relative(releaseRoot)}: missing manifests directory`);
+      } else if (manifestFiles.length === 0) {
+        issues.push(`${relative(manifestsDir)}: expected at least one .yml guide manifest`);
       }
       if (!fs.existsSync(metadataPath)) {
         issues.push(`${relative(releaseRoot)}: missing assets/release-metadata.yml`);
         continue;
       }
 
-      let manifest;
       let metadata;
-      try {
-        manifest = readYaml(manifestPath);
-      } catch (error) {
-        issues.push(`${relative(manifestPath)}: ${error.message}`);
-        continue;
-      }
       try {
         metadata = readYaml(metadataPath);
       } catch (error) {
@@ -504,7 +515,25 @@ function main() {
       }
 
       validateMetadata(releaseName, metadata, metadataPath, issues);
-      validateManifest(releaseName, manifest, manifestPath, topics, issues);
+      const bookIds = new Map();
+      for (const manifestFile of manifestFiles) {
+        const manifestPath = path.join(manifestsDir, manifestFile);
+        let manifest;
+        try {
+          manifest = readYaml(manifestPath);
+        } catch (error) {
+          issues.push(`${relative(manifestPath)}: ${error.message}`);
+          continue;
+        }
+        if (manifest.book_id) {
+          if (bookIds.has(manifest.book_id)) {
+            issues.push(`${relative(manifestPath)}: duplicate book_id "${manifest.book_id}" also used by ${relative(bookIds.get(manifest.book_id))}`);
+          } else {
+            bookIds.set(manifest.book_id, manifestPath);
+          }
+        }
+        validateManifest(releaseName, manifest, manifestPath, topics, issues);
+      }
       if (metadata.latest === true) latestReleases.push(releaseName);
     }
   }

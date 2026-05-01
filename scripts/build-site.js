@@ -38,6 +38,7 @@ const releasesDir = path.join(repoRoot, "releases");
 const siteDir = path.join(repoRoot, "site");
 const selectedReleaseNames = parseReleaseList(args.releases || args.release || process.env.RELEASES);
 const buildTimestamp = new Date().toISOString();
+const defaultManifestFile = "admin-guide.yml";
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -676,11 +677,32 @@ function topicIdsFromSections(sections) {
   return sections.flatMap((section) => section.topics || []);
 }
 
+function manifestFilesForRelease(releaseRoot) {
+  const manifestsDir = path.join(releaseRoot, "manifests");
+  return fs.readdirSync(manifestsDir)
+    .filter((fileName) => fileName.endsWith(".yml") || fileName.endsWith(".yaml"))
+    .sort((left, right) => {
+      if (left === defaultManifestFile) return -1;
+      if (right === defaultManifestFile) return 1;
+      return left.localeCompare(right);
+    });
+}
+
 function loadReleaseConfig(releaseName) {
   const releaseRoot = path.join(releasesDir, releaseName);
+  const guides = manifestFilesForRelease(releaseRoot).map((manifestFile) => {
+    const manifest = parseYaml(fs.readFileSync(path.join(releaseRoot, "manifests", manifestFile), "utf8"));
+    return {
+      manifestFile,
+      isDefault: manifestFile === defaultManifestFile,
+      bookId: manifest.book_id || manifestFile.replace(/\.(ya?ml)$/, ""),
+      manifest,
+    };
+  });
+
   return {
     releaseName,
-    manifest: parseYaml(fs.readFileSync(path.join(releaseRoot, "manifests", "book.yml"), "utf8")),
+    guides,
     metadata: parseYaml(fs.readFileSync(path.join(releaseRoot, "assets", "release-metadata.yml"), "utf8")),
   };
 }
@@ -697,7 +719,21 @@ function publishDirPath(release) {
 }
 
 function releaseIndexPath(release) {
-  const dirPath = publishDirPath(release);
+  return guideIndexPath(release, defaultGuide(release));
+}
+
+function defaultGuide(release) {
+  return release.guides.find((guide) => guide.isDefault) || release.guides[0];
+}
+
+function guideDirPath(release, guide) {
+  const releaseDir = publishDirPath(release);
+  if (guide.isDefault) return releaseDir;
+  return releaseDir === "." ? guide.bookId : `${releaseDir}/${guide.bookId}`;
+}
+
+function guideIndexPath(release, guide) {
+  const dirPath = guideDirPath(release, guide);
   return dirPath === "." ? "index.html" : `${dirPath}/index.html`;
 }
 
@@ -712,8 +748,12 @@ function outputDirForRelease(release) {
   return dirPath === "." ? siteDir : path.join(siteDir, ...dirPath.split("/"));
 }
 
-function buildReleaseNav(releases, activeRelease = null) {
-  const fromDir = activeRelease ? publishDirPath(activeRelease) : "";
+function outputDirForGuide(release, guide) {
+  const dirPath = guideDirPath(release, guide);
+  return dirPath === "." ? siteDir : path.join(siteDir, ...dirPath.split("/"));
+}
+
+function buildReleaseNav(releases, fromDir = "", activeRelease = null) {
   return releases.map((release) => ({
     label: release.metadata.release,
     href: hrefFromDir(fromDir, releaseIndexPath(release)),
@@ -721,15 +761,27 @@ function buildReleaseNav(releases, activeRelease = null) {
   }));
 }
 
+function buildGuideLinks(release, activeGuide, fromDir) {
+  return release.guides.map((guide) => ({
+    label: guide.manifest.title,
+    href: hrefFromDir(fromDir, guideIndexPath(release, guide)),
+    active: guide.bookId === activeGuide.bookId,
+  }));
+}
+
 function renderHomePage(releases) {
   const cards = releases.map((release) => {
     const latest = release.metadata.latest ? '<span class="pill">Latest release</span>' : "";
+    const guideLinks = release.guides
+      .map((guide) => `<a href="${hrefFromDir("", guideIndexPath(release, guide))}">${escapeHtml(guide.manifest.title)}</a>`)
+      .join(", ");
     return `
       <article class="release-card">
         <div class="eyebrow">Release package</div>
         <h2><a href="${hrefFromDir("", releaseIndexPath(release))}">${escapeHtml(release.metadata.display_name)}</a></h2>
         <p>Publish path: <code>${escapeHtml(release.metadata.publish_path)}</code></p>
         <p>Status: <strong>${escapeHtml(release.metadata.status)}</strong></p>
+        <p>Guides: ${guideLinks}</p>
         <div class="pill-row">${latest}</div>
       </article>
     `;
@@ -756,7 +808,7 @@ function renderHomePage(releases) {
   );
 }
 
-function renderReleasePage(release, sections, releaseLinks) {
+function renderReleasePage(release, guide, sections, releaseLinks, guideLinks) {
   const tocMarkup = sections.map((section) => `
     <section class="toc-section">
       <div class="toc-section-title">${escapeHtml(section.title)}</div>
@@ -771,15 +823,20 @@ function renderReleasePage(release, sections, releaseLinks) {
       </ol>
     </section>
   `).join("");
+  const guideLinksMarkup = guideLinks.length > 1
+    ? `<p><strong>Guides:</strong> ${guideLinks.map((item) => item.active
+      ? `<strong>${escapeHtml(item.label)}</strong>`
+      : `<a href="${item.href}">${escapeHtml(item.label)}</a>`).join(", ")}</p>`
+    : "";
 
   return siteChrome(
-    release.metadata.display_name,
+    `${guide.manifest.title} · ${release.metadata.display_name}`,
     `
     <main>
       <section class="hero">
         <div class="eyebrow">Release package</div>
         <h1>${escapeHtml(release.metadata.display_name)}</h1>
-        <p>Use this guide to configure, secure, upgrade, and maintain routers for ${escapeHtml(release.metadata.display_name)}. The topics in this release focus on common operational tasks for day-to-day network administration.</p>
+        <p>Use the ${escapeHtml(guide.manifest.title)} to configure, secure, upgrade, and maintain routers for ${escapeHtml(release.metadata.display_name)}.</p>
         <div class="pill-row">
           <span class="pill">Path ${escapeHtml(release.metadata.publish_path)}</span>
           <span class="pill">${escapeHtml(release.metadata.status)}</span>
@@ -789,7 +846,7 @@ function renderReleasePage(release, sections, releaseLinks) {
       <section class="grid">
         <section class="toc-shell">
           <div class="eyebrow">Table of contents</div>
-          <h2>${escapeHtml(release.manifest.title)}</h2>
+          <h2>${escapeHtml(guide.manifest.title)}</h2>
           ${tocMarkup}
         </section>
         <aside class="panel">
@@ -797,8 +854,10 @@ function renderReleasePage(release, sections, releaseLinks) {
           <h2>Build summary</h2>
           <p>Topics are filtered by canonical lifecycle metadata before being placed into the release navigation.</p>
           <p><strong>Release:</strong> ${escapeHtml(release.metadata.release)}</p>
+          <p><strong>Guide:</strong> ${escapeHtml(guide.bookId)}</p>
           <p><strong>Publish path:</strong> <code>${escapeHtml(release.metadata.publish_path)}</code></p>
           <p><strong>Sections:</strong> ${sections.length}</p>
+          ${guideLinksMarkup}
         </aside>
       </section>
     </main>`,
@@ -806,7 +865,7 @@ function renderReleasePage(release, sections, releaseLinks) {
   );
 }
 
-function renderTopicPage(topic, release, releaseLinks, nav) {
+function renderTopicPage(topic, release, guide, releaseLinks, nav) {
   const metaItems = [
     ["Product", topic.product],
     ["Platform", topic.platform],
@@ -827,11 +886,11 @@ function renderTopicPage(topic, release, releaseLinks, nav) {
     : "";
 
   return siteChrome(
-    `${topic.title} · ${release.metadata.display_name}`,
+    `${topic.title} · ${guide.manifest.title} · ${release.metadata.display_name}`,
     `
     <main>
       <div class="topic-shell">
-        <div class="breadcrumbs"><a href="./index.html">${escapeHtml(release.metadata.display_name)}</a> · Topic ID <code>${escapeHtml(topic.topicId)}</code></div>
+        <div class="breadcrumbs"><a href="./index.html">${escapeHtml(guide.manifest.title)}</a> · ${escapeHtml(release.metadata.display_name)} · Topic ID <code>${escapeHtml(topic.topicId)}</code></div>
         ${topic.summary ? `<p>${escapeHtml(topic.summary)}</p>` : ""}
         ${metaItems ? `<div class="meta-grid">${metaItems}</div>` : ""}
         ${markdownToHtml(renderVersionBlocks(topic.body, release.releaseName))}
@@ -842,11 +901,11 @@ function renderTopicPage(topic, release, releaseLinks, nav) {
   );
 }
 
-function buildRelease(topics, release, releases) {
-  const outputDir = outputDirForRelease(release);
+function buildGuide(topics, release, guide, releases) {
+  const outputDir = outputDirForGuide(release, guide);
   ensureDir(outputDir);
 
-  const manifestSections = release.manifest.sections || [];
+  const manifestSections = guide.manifest.sections || [];
   const included = [];
   const includedTopicIds = new Set();
   for (const topicId of topicIdsFromSections(manifestSections)) {
@@ -876,7 +935,9 @@ function buildRelease(topics, release, releases) {
     })
     .filter(Boolean);
 
-  const releaseLinks = buildReleaseNav(releases, release);
+  const fromDir = guideDirPath(release, guide);
+  const releaseLinks = buildReleaseNav(releases, fromDir, release);
+  const guideLinks = buildGuideLinks(release, guide, fromDir);
   const orderedTopics = sections.flatMap((section) => section.topics);
 
   for (const [index, orderedTopic] of orderedTopics.entries()) {
@@ -885,11 +946,17 @@ function buildRelease(topics, release, releases) {
     const next = index < orderedTopics.length - 1 ? orderedTopics[index + 1] : null;
     fs.writeFileSync(
       path.join(outputDir, `${topic.slug}.html`),
-      renderTopicPage(topic, release, releaseLinks, { previous, next })
+      renderTopicPage(topic, release, guide, releaseLinks, { previous, next })
     );
   }
 
-  fs.writeFileSync(path.join(outputDir, "index.html"), renderReleasePage(release, sections, releaseLinks));
+  fs.writeFileSync(path.join(outputDir, "index.html"), renderReleasePage(release, guide, sections, releaseLinks, guideLinks));
+}
+
+function buildRelease(topics, release, releases) {
+  for (const guide of release.guides) {
+    buildGuide(topics, release, guide, releases);
+  }
 }
 
 function main() {

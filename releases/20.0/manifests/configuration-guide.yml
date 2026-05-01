@@ -1,0 +1,15 @@
+book_id: configuration-guide
+title: Configuration Guide
+sections:
+  - id: access
+    title: Access configuration
+    topics: ["NET-SSH-TASK-001", "NET-GENERATE-SSH-KEYS-TASK-001"]
+  - id: network-services
+    title: Network services
+    topics: ["NET-PROXY-TASK-001"]
+  - id: lifecycle
+    title: Lifecycle configuration
+    topics: ["NET-UPGRADE-TASK-001", "NET-IOSXR-DEPLOY-TASK-001"]
+  - id: authentication
+    title: Authentication
+    topics: ["NET-AUTHENTICATE-USERS-TASK-001", "NET-SWITCH-AUTHENTICATION-TASK-001"]
