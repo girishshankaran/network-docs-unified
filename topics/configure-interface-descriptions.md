@@ -36,11 +36,20 @@ Use this procedure to add descriptions to router interfaces so operators can ide
 
 ## Steps
 
+:::version range="19.0"
+1. Open **Configuration > Device Settings > Interfaces**.
+2. Select the interface that you want to update.
+3. Enter a description that identifies the peer, circuit, or service.
+4. Save the running configuration.
+:::
+
+:::version range="20.0+"
 1. Open **Configuration > Interfaces**.
 2. Select the router and interface that you want to update.
 3. Enter a description that identifies the peer, circuit, or service.
 4. Review the pending configuration.
 5. Save and deploy the interface update.
+:::
 
 ## Verification
 
