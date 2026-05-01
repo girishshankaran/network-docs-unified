@@ -1,9 +1,6 @@
 book_id: configuration-guide
 title: Config Guide
 sections:
-  - id: access
-    title: Access configuration
-    topics: ["NET-SSH-TASK-001", "NET-GENERATE-SSH-KEYS-TASK-001"]
   - id: interfaces
     title: Interface configuration
     topics: ["NET-INTERFACE-DESCRIPTION-TASK-001"]
@@ -13,6 +10,3 @@ sections:
   - id: monitoring
     title: Monitoring configuration
     topics: ["NET-SNMP-TASK-001"]
-  - id: lifecycle
-    title: Lifecycle configuration
-    topics: ["NET-IOSXR-DEPLOY-TASK-001", "NET-DELETE-CONFIG-TASK-001"]
