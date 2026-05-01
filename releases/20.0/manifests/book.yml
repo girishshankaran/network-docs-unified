@@ -9,6 +9,7 @@ topics:
   - NET-CREATE-PUBLISH-API-TASK-001
   - NET-AUTHENTICATE-USERS-TASK-001
   - NET-SWITCH-AUTHENTICATION-TASK-001
+  - NET-DELETE-CONFIG-TASK-001
 sections:
   - id: access
     title: Access
@@ -31,3 +32,6 @@ sections:
   - id: authenticate-switch
     title: Authenticate switch
     topics: ["NET-SWITCH-AUTHENTICATION-TASK-001"]
+  - id: Cleanup
+    title: Cleanup
+    topics: ["NET-DELETE-CONFIG-TASK-001"]
