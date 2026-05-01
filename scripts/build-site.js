@@ -258,7 +258,7 @@ function siteChrome(title, body, releaseLinks = []) {
       margin: 0 auto;
       padding: 40px 20px 72px;
     }
-    .hero, .panel, .topic-shell, .toc-shell {
+    .hero, .panel, .topic-shell, .toc-shell, .guide-details {
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: 24px;
@@ -421,6 +421,63 @@ function siteChrome(title, body, releaseLinks = []) {
       font-size: 0.98rem;
       line-height: 1.6;
     }
+    .guide-list {
+      display: grid;
+      gap: 14px;
+    }
+    .guide-details {
+      overflow: hidden;
+      background: rgba(255, 251, 243, 0.92);
+    }
+    .guide-details summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px 24px;
+      cursor: pointer;
+      list-style: none;
+    }
+    .guide-details summary::-webkit-details-marker {
+      display: none;
+    }
+    .guide-details summary::after {
+      content: "+";
+      flex: 0 0 auto;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      color: var(--accent);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+    .guide-details[open] summary::after {
+      content: "-";
+    }
+    .guide-title {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+    .guide-meta {
+      display: block;
+      color: var(--muted);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-size: 0.92rem;
+    }
+    .guide-body {
+      padding: 0 24px 24px;
+      border-top: 1px solid var(--line);
+    }
+    .guide-body .toc-section:first-child {
+      margin-top: 22px;
+    }
     .meta-grid {
       display: grid;
       gap: 10px 18px;
@@ -473,6 +530,8 @@ function siteChrome(title, body, releaseLinks = []) {
     @media (max-width: 800px) {
       .grid { grid-template-columns: 1fr; }
       .hero, .release-card, .section-card, .panel, .topic-shell, .toc-shell { padding: 22px; }
+      .guide-details summary { align-items: flex-start; padding: 20px; }
+      .guide-body { padding: 0 20px 20px; }
       .topic-nav { flex-direction: column; }
       .meta-grid { grid-template-columns: 1fr; }
     }
@@ -737,6 +796,11 @@ function guideIndexPath(release, guide) {
   return dirPath === "." ? "index.html" : `${dirPath}/index.html`;
 }
 
+function topicPathForGuide(release, guide, topic) {
+  const dirPath = guideDirPath(release, guide);
+  return dirPath === "." ? `${topic.slug}.html` : `${dirPath}/${topic.slug}.html`;
+}
+
 function hrefFromDir(fromDir, targetPath) {
   const relative = path.posix.relative(fromDir === "." ? "" : fromDir, targetPath);
   if (!relative) return "./index.html";
@@ -808,14 +872,14 @@ function renderHomePage(releases) {
   );
 }
 
-function renderReleasePage(release, guide, sections, releaseLinks, guideLinks) {
-  const tocMarkup = sections.map((section) => `
+function renderTocSections(sections, topicHref) {
+  return sections.map((section) => `
     <section class="toc-section">
       <div class="toc-section-title">${escapeHtml(section.title)}</div>
       <ol class="toc-list">
         ${section.topics.map((topic) => `
           <li>
-            <a class="toc-entry-title" href="./${topic.slug}.html">${escapeHtml(topic.title)}</a>
+            <a class="toc-entry-title" href="${topicHref(topic)}">${escapeHtml(topic.title)}</a>
             <span class="toc-entry-meta">${escapeHtml(topic.contentType || "task")} · ${escapeHtml(topic.estimatedTime || "Estimated time not set")}</span>
             ${topic.summary ? `<p class="toc-entry-summary">${escapeHtml(topic.summary)}</p>` : ""}
           </li>
@@ -823,6 +887,10 @@ function renderReleasePage(release, guide, sections, releaseLinks, guideLinks) {
       </ol>
     </section>
   `).join("");
+}
+
+function renderGuidePage(release, guide, sections, releaseLinks, guideLinks) {
+  const tocMarkup = renderTocSections(sections, (topic) => `./${topic.slug}.html`);
   const guideLinksMarkup = guideLinks.length > 1
     ? `<p><strong>Guides:</strong> ${guideLinks.map((item) => item.active
       ? `<strong>${escapeHtml(item.label)}</strong>`
@@ -865,7 +933,55 @@ function renderReleasePage(release, guide, sections, releaseLinks, guideLinks) {
   );
 }
 
+function renderGuideAccordion(release, guide, sections, fromDir) {
+  const sectionCount = sections.length;
+  const topicCount = sections.reduce((count, section) => count + section.topics.length, 0);
+  const tocMarkup = renderTocSections(sections, (topic) => hrefFromDir(fromDir, topicPathForGuide(release, guide, topic)));
+  return `
+    <details class="guide-details">
+      <summary>
+        <span>
+          <span class="guide-title">${escapeHtml(guide.manifest.title)}</span>
+          <span class="guide-meta">${sectionCount} section${sectionCount === 1 ? "" : "s"} · ${topicCount} topic${topicCount === 1 ? "" : "s"}</span>
+        </span>
+      </summary>
+      <div class="guide-body">
+        ${tocMarkup}
+      </div>
+    </details>
+  `;
+}
+
+function renderReleasePage(release, guideOutputs, releaseLinks) {
+  const fromDir = publishDirPath(release);
+  const guidesMarkup = guideOutputs
+    .map(({ guide, sections }) => renderGuideAccordion(release, guide, sections, fromDir))
+    .join("");
+
+  return siteChrome(
+    `${release.metadata.display_name} Guides`,
+    `
+    <main>
+      <section class="hero">
+        <div class="eyebrow">Release package</div>
+        <h1>${escapeHtml(release.metadata.display_name)}</h1>
+        <p>Select a guide to expand its topics for ${escapeHtml(release.metadata.display_name)}.</p>
+        <div class="pill-row">
+          <span class="pill">Path ${escapeHtml(release.metadata.publish_path)}</span>
+          <span class="pill">${escapeHtml(release.metadata.status)}</span>
+          ${release.metadata.latest ? '<span class="pill">Latest</span>' : ""}
+        </div>
+      </section>
+      <section class="guide-list">
+        ${guidesMarkup}
+      </section>
+    </main>`,
+    releaseLinks
+  );
+}
+
 function renderTopicPage(topic, release, guide, releaseLinks, nav) {
+  const breadcrumbLabel = guide.isDefault ? release.metadata.display_name : guide.manifest.title;
   const metaItems = [
     ["Product", topic.product],
     ["Platform", topic.platform],
@@ -890,7 +1006,7 @@ function renderTopicPage(topic, release, guide, releaseLinks, nav) {
     `
     <main>
       <div class="topic-shell">
-        <div class="breadcrumbs"><a href="./index.html">${escapeHtml(guide.manifest.title)}</a> · ${escapeHtml(release.metadata.display_name)} · Topic ID <code>${escapeHtml(topic.topicId)}</code></div>
+        <div class="breadcrumbs"><a href="./index.html">${escapeHtml(breadcrumbLabel)}</a> · ${escapeHtml(guide.manifest.title)} · Topic ID <code>${escapeHtml(topic.topicId)}</code></div>
         ${topic.summary ? `<p>${escapeHtml(topic.summary)}</p>` : ""}
         ${metaItems ? `<div class="meta-grid">${metaItems}</div>` : ""}
         ${markdownToHtml(renderVersionBlocks(topic.body, release.releaseName))}
@@ -950,13 +1066,18 @@ function buildGuide(topics, release, guide, releases) {
     );
   }
 
-  fs.writeFileSync(path.join(outputDir, "index.html"), renderReleasePage(release, guide, sections, releaseLinks, guideLinks));
+  if (!guide.isDefault) {
+    fs.writeFileSync(path.join(outputDir, "index.html"), renderGuidePage(release, guide, sections, releaseLinks, guideLinks));
+  }
+
+  return { guide, sections };
 }
 
 function buildRelease(topics, release, releases) {
-  for (const guide of release.guides) {
-    buildGuide(topics, release, guide, releases);
-  }
+  const guideOutputs = release.guides.map((guide) => buildGuide(topics, release, guide, releases));
+  const releaseDir = outputDirForGuide(release, defaultGuide(release));
+  const releaseLinks = buildReleaseNav(releases, publishDirPath(release), release);
+  fs.writeFileSync(path.join(releaseDir, "index.html"), renderReleasePage(release, guideOutputs, releaseLinks));
 }
 
 function main() {
