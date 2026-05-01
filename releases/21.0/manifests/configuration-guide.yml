@@ -1,0 +1,15 @@
+book_id: configuration-guide
+title: Configuration Guide
+sections:
+  - id: access
+    title: Access configuration
+    topics: ["NET-SSH-TASK-001"]
+  - id: network-services
+    title: Network services
+    topics: ["NET-PROXY-TASK-001", "NET-DHCP-TASK-001"]
+  - id: monitoring
+    title: Monitoring
+    topics: ["NET-CONFIGURE-ALERTS-ROUTERS-TASK-001"]
+  - id: authentication
+    title: Authentication
+    topics: ["NET-AUTHENTICATE-USERS-TASK-001", "NET-SWITCH-AUTHENTICATION-TASK-001"]

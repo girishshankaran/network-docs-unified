@@ -6,7 +6,7 @@ This project keeps the core Option 2 separation while removing the two-repositor
 
 - `topics/` stores canonical authored topics.
 - `snippets/` stores optional shared fragments.
-- `releases/<version>/` stores release-specific manifests and metadata.
+- `releases/<version>/` stores release-specific guide manifests and metadata.
 - `site/` is generated output and is ignored by Git.
 
 The sample content is copied from the existing two-repo implementation and uses releases `19.0`, `20.0`, and `21.0`. The model also supports folders such as `releases/17.10`, `releases/17.12`, or `releases/latest`.
@@ -51,7 +51,7 @@ Detect impacted releases from explicit changed files:
 
 ```sh
 node scripts/detect-impacted-releases.js . --files topics/create-api-docs-using-pubhub.md
-node scripts/detect-impacted-releases.js . --files releases/20.0/manifests/book.yml
+node scripts/detect-impacted-releases.js . --files releases/20.0/manifests/configuration-guide.yml
 ```
 
 Detect impacted releases from a Git range:
@@ -63,7 +63,7 @@ node scripts/detect-impacted-releases.js . --base origin/main --head HEAD
 ## Impact Rules
 
 - A change under `releases/<version>/` rebuilds only that release output.
-- A change under `topics/` rebuilds releases whose manifest sections include the topic ID and whose release is listed in the topic lifecycle metadata.
+- A change under `topics/` rebuilds releases where any guide manifest section includes the topic ID and whose release is listed in the topic lifecycle metadata.
 - A change under `snippets/`, `templates/`, `schemas/`, `scripts/`, or `.github/workflows/` rebuilds all release outputs.
 - A docs-only change does not trigger a release output build.
 

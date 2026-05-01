@@ -199,6 +199,13 @@ function topicIdsFromSections(sections) {
   return sections.flatMap((section) => section.topics || []);
 }
 
+function manifestFilesForRelease(releaseRoot) {
+  const manifestsDir = path.join(releaseRoot, "manifests");
+  if (!fs.existsSync(manifestsDir)) return [];
+  return fs.readdirSync(manifestsDir)
+    .filter((fileName) => fileName.endsWith(".yml") || fileName.endsWith(".yaml"));
+}
+
 function loadReleases(repoRoot) {
   const releasesDir = path.join(repoRoot, "releases");
   if (!fs.existsSync(releasesDir)) return [];
@@ -207,11 +214,16 @@ function loadReleases(repoRoot) {
     .filter((entryName) => fs.statSync(path.join(releasesDir, entryName)).isDirectory())
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
     .map((releaseName) => {
-      const manifestPath = path.join(releasesDir, releaseName, "manifests", "book.yml");
-      const manifest = fs.existsSync(manifestPath) ? parseYaml(fs.readFileSync(manifestPath, "utf8")) : {};
+      const releaseRoot = path.join(releasesDir, releaseName);
+      const topicIds = manifestFilesForRelease(releaseRoot)
+        .flatMap((manifestFile) => {
+          const manifestPath = path.join(releaseRoot, "manifests", manifestFile);
+          const manifest = parseYaml(fs.readFileSync(manifestPath, "utf8"));
+          return topicIdsFromSections(manifest.sections || []);
+        });
       return {
         releaseName,
-        topics: new Set(topicIdsFromSections(manifest.sections || [])),
+        topics: new Set(topicIds),
       };
     });
 }

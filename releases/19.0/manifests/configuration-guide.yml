@@ -1,0 +1,9 @@
+book_id: configuration-guide
+title: Configuration Guide
+sections:
+  - id: access
+    title: Access configuration
+    topics: ["NET-SSH-TASK-001", "NET-GENERATE-SSH-KEYS-TASK-001"]
+  - id: lifecycle
+    title: Lifecycle configuration
+    topics: ["NET-IOSXR-DEPLOY-TASK-001", "NET-DELETE-CONFIG-TASK-001"]

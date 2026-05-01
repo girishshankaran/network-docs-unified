@@ -159,9 +159,16 @@ function loadTopics() {
 
 function loadReleaseConfig(releaseName) {
   const releaseRoot = path.join(releasesDir, releaseName);
+  const manifestsDir = path.join(releaseRoot, "manifests");
+  const guides = fs.readdirSync(manifestsDir)
+    .filter((fileName) => fileName.endsWith(".yml") || fileName.endsWith(".yaml"))
+    .map((manifestFile) => ({
+      manifestFile,
+      manifest: parseYaml(fs.readFileSync(path.join(manifestsDir, manifestFile), "utf8")),
+    }));
   return {
     releaseName,
-    manifest: parseYaml(fs.readFileSync(path.join(releaseRoot, "manifests", "book.yml"), "utf8")),
+    guides,
   };
 }
 
@@ -185,7 +192,7 @@ function main() {
 
   for (const releaseName of releases) {
     const release = loadReleaseConfig(releaseName);
-    const sectionTopics = new Set(topicIdsFromSections(release.manifest.sections || []));
+    const sectionTopics = new Set(release.guides.flatMap((guide) => topicIdsFromSections(guide.manifest.sections || [])));
 
     const missingFromSections = topics
       .filter((topic) => topic.appliesTo.includes(releaseName))
