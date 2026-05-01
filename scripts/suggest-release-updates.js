@@ -175,51 +175,36 @@ function suggestSection(topic) {
   return { id: "misc", title: "Additional tasks" };
 }
 
+function topicIdsFromSections(sections) {
+  return sections.flatMap((section) => section.topics || []);
+}
+
 function main() {
   const topics = loadTopics();
   const releases = fs.readdirSync(releasesDir).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   for (const releaseName of releases) {
     const release = loadReleaseConfig(releaseName);
-    const manifestTopics = new Set(release.manifest.topics || []);
-    const tocTopics = new Set((release.manifest.sections || []).flatMap((section) => section.topics || []));
+    const sectionTopics = new Set(topicIdsFromSections(release.manifest.sections || []));
 
-    const missingFromRelease = topics
+    const missingFromSections = topics
       .filter((topic) => topic.appliesTo.includes(releaseName))
-      .filter((topic) => !manifestTopics.has(topic.topicId));
-
-    const missingFromToc = [...manifestTopics]
-      .filter((topicId) => !tocTopics.has(topicId))
-      .map((topicId) => topics.find((topic) => topic.topicId === topicId))
-      .filter(Boolean);
+      .filter((topic) => !sectionTopics.has(topic.topicId));
 
     console.log(`\nRelease ${releaseName}`);
     console.log("-".repeat(`Release ${releaseName}`.length));
 
-    if (missingFromRelease.length === 0 && missingFromToc.length === 0) {
+    if (missingFromSections.length === 0) {
       console.log("No suggestions.");
       continue;
     }
 
-    if (missingFromRelease.length > 0) {
-      hasSuggestions = true;
-      console.log("Suggested additions to release manifest:");
-      for (const topic of missingFromRelease) {
-        const section = suggestSection(topic);
-        console.log(`- ${topic.topicId} (${topic.title})`);
-        console.log(`  add to manifests/book.yml topics`);
-        console.log(`  suggested section: ${section.title} [${section.id}]`);
-      }
-    }
-
-    if (missingFromToc.length > 0) {
-      hasSuggestions = true;
-      console.log("Manifest entries missing from sections:");
-      for (const topic of missingFromToc) {
-        const section = suggestSection(topic);
-        console.log(`- ${topic.topicId} (${topic.title})`);
-        console.log(`  suggested section: ${section.title} [${section.id}]`);
-      }
+    hasSuggestions = true;
+    console.log("Suggested additions to release sections:");
+    for (const topic of missingFromSections) {
+      const section = suggestSection(topic);
+      console.log(`- ${topic.topicId} (${topic.title})`);
+      console.log(`  suggested section: ${section.title} [${section.id}]`);
     }
   }
 

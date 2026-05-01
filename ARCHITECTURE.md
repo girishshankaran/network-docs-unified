@@ -28,7 +28,7 @@ network-docs-unified/
 
 `releases/<version>/` owns release assembly. Each release has:
 
-- `manifests/book.yml`, which lists included topic IDs and the table of contents structure.
+- `manifests/book.yml`, whose sections list included topic IDs and define the table of contents structure.
 - `assets/release-metadata.yml`, which defines display name, publish path, status, and latest flag.
 
 `scripts/` owns validation, impact detection, and static output generation.
@@ -37,7 +37,7 @@ network-docs-unified/
 
 A topic appears in a release only when both conditions are true:
 
-1. `releases/<version>/manifests/book.yml` lists the topic ID.
+1. `releases/<version>/manifests/book.yml` includes the topic ID in a section.
 2. The topic frontmatter includes the release in `lifecycle.applies_to`.
 
 This preserves canonical reuse while allowing each release to decide its own assembled navigation.
@@ -49,7 +49,7 @@ After a merge to `main`, the workflow compares the changed files and computes im
 ```text
 topics/<slug>.md
   -> find topic_id
-  -> find release manifests that include that topic_id
+  -> find release manifests with sections that include that topic_id
   -> intersect with lifecycle.applies_to
   -> rebuild those release outputs
 

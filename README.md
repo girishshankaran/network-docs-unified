@@ -63,7 +63,7 @@ node scripts/detect-impacted-releases.js . --base origin/main --head HEAD
 ## Impact Rules
 
 - A change under `releases/<version>/` rebuilds only that release output.
-- A change under `topics/` rebuilds releases whose manifest includes the topic ID and whose release is listed in the topic lifecycle metadata.
+- A change under `topics/` rebuilds releases whose manifest sections include the topic ID and whose release is listed in the topic lifecycle metadata.
 - A change under `snippets/`, `templates/`, `schemas/`, `scripts/`, or `.github/workflows/` rebuilds all release outputs.
 - A docs-only change does not trigger a release output build.
 

@@ -422,28 +422,9 @@ function validateManifest(releaseName, manifest, manifestPath, topics, issues) {
     issues.push(`${relative(manifestPath)}: missing title`);
   }
 
-  const manifestTopics = requireArray(manifest.topics, `${relative(manifestPath)} topics`, issues);
   const sections = requireArray(manifest.sections, `${relative(manifestPath)} sections`, issues);
-  const manifestTopicSet = new Set();
   const sectionTopicSet = new Set();
   const sectionIds = new Set();
-
-  for (const topicId of manifestTopics) {
-    if (manifestTopicSet.has(topicId)) {
-      issues.push(`${relative(manifestPath)}: duplicate topic "${topicId}" in topics`);
-      continue;
-    }
-    manifestTopicSet.add(topicId);
-
-    const topic = topics.get(topicId);
-    if (!topic) {
-      issues.push(`${relative(manifestPath)}: topic "${topicId}" does not exist in content repo`);
-      continue;
-    }
-    if (!topic.appliesTo.includes(releaseName)) {
-      issues.push(`${relative(manifestPath)}: topic "${topicId}" is listed for ${releaseName} but applies_to is [${topic.appliesTo.join(", ")}]`);
-    }
-  }
 
   for (const section of sections) {
     if (!section.id) {
@@ -468,15 +449,14 @@ function validateManifest(releaseName, manifest, manifestPath, topics, issues) {
       }
       sectionTopicSet.add(topicId);
 
-      if (!manifestTopicSet.has(topicId)) {
-        issues.push(`${relative(manifestPath)}: section "${section.id || "(missing id)"}" references topic "${topicId}" that is not listed in topics`);
+      const topic = topics.get(topicId);
+      if (!topic) {
+        issues.push(`${relative(manifestPath)}: section "${section.id || "(missing id)"}" references topic "${topicId}" that does not exist in content repo`);
+        continue;
       }
-    }
-  }
-
-  for (const topicId of manifestTopicSet) {
-    if (!sectionTopicSet.has(topicId)) {
-      issues.push(`${relative(manifestPath)}: topic "${topicId}" is listed in topics but not in any section`);
+      if (!topic.appliesTo.includes(releaseName)) {
+        issues.push(`${relative(manifestPath)}: section "${section.id || "(missing id)"}" references topic "${topicId}" for ${releaseName} but applies_to is [${topic.appliesTo.join(", ")}]`);
+      }
     }
   }
 }

@@ -1,14 +1,5 @@
 book_id: router-admin-guide
 title: Router Administration Guide
-topics:
-  - NET-SSH-TASK-001
-  - NET-GENERATE-SSH-KEYS-TASK-001
-  - NET-PROXY-TASK-001
-  - NET-UPGRADE-TASK-001
-  - NET-IOSXR-DEPLOY-TASK-001
-  - NET-CREATE-PUBLISH-API-TASK-001
-  - NET-AUTHENTICATE-USERS-TASK-001
-  - NET-SWITCH-AUTHENTICATION-TASK-001
 sections:
   - id: access
     title: Access

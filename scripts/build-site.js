@@ -672,6 +672,10 @@ function releaseMatchesTopic(release, topic) {
   return (topic.lifecycle.applies_to || []).includes(release);
 }
 
+function topicIdsFromSections(sections) {
+  return sections.flatMap((section) => section.topics || []);
+}
+
 function loadReleaseConfig(releaseName) {
   const releaseRoot = path.join(releasesDir, releaseName);
   return {
@@ -842,15 +846,19 @@ function buildRelease(topics, release, releases) {
   const outputDir = outputDirForRelease(release);
   ensureDir(outputDir);
 
+  const manifestSections = release.manifest.sections || [];
   const included = [];
-  for (const topicId of release.manifest.topics || []) {
+  const includedTopicIds = new Set();
+  for (const topicId of topicIdsFromSections(manifestSections)) {
+    if (includedTopicIds.has(topicId)) continue;
     const topic = topics.get(topicId);
     if (!topic) continue;
     if (!releaseMatchesTopic(release.releaseName, topic)) continue;
     included.push(topic);
+    includedTopicIds.add(topicId);
   }
 
-  const sections = (release.manifest.sections || [])
+  const sections = manifestSections
     .map((section) => {
       const sectionTopics = (section.topics || [])
         .map((topicId) => included.find((topic) => topic.topicId === topicId))

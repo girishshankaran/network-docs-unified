@@ -195,6 +195,10 @@ function loadTopics(repoRoot) {
   return topics;
 }
 
+function topicIdsFromSections(sections) {
+  return sections.flatMap((section) => section.topics || []);
+}
+
 function loadReleases(repoRoot) {
   const releasesDir = path.join(repoRoot, "releases");
   if (!fs.existsSync(releasesDir)) return [];
@@ -207,7 +211,7 @@ function loadReleases(repoRoot) {
       const manifest = fs.existsSync(manifestPath) ? parseYaml(fs.readFileSync(manifestPath, "utf8")) : {};
       return {
         releaseName,
-        topics: new Set(manifest.topics || []),
+        topics: new Set(topicIdsFromSections(manifest.sections || [])),
       };
     });
 }
