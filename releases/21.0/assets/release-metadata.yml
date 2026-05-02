@@ -3,3 +3,4 @@ display_name: "Release 21.0"
 publish_path: "/21.0/"
 status: "supported"
 latest: true
+publish: true

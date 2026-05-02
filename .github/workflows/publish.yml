@@ -56,7 +56,7 @@ jobs:
         if: steps.impact.outputs.has_impacts == 'true'
         run: |
           echo "Impacted release outputs: ${{ steps.impact.outputs.impacted_releases }}"
-          node scripts/build-site.js .
+          node scripts/build-publish-site.js .
 
       - name: Upload Pages artifact
         if: steps.impact.outputs.has_impacts == 'true'

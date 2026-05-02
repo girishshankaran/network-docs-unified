@@ -7,7 +7,8 @@
     "validate": "node scripts/validate-content.js && node scripts/validate-release-assets.js .",
     "suggest": "node scripts/suggest-release-updates.js .",
     "impact": "node scripts/detect-impacted-releases.js .",
-    "build": "node scripts/build-site.js .",
+    "build": "node scripts/build-publish-site.js .",
+    "build:current": "node scripts/build-site.js .",
     "build:release": "node scripts/build-site.js . --releases"
   }
 }

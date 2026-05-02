@@ -31,7 +31,7 @@ network-docs-unified/
 `releases/<version>/` owns release assembly. Each release has:
 
 - `manifests/*.yml`, where each file is one guide with a stable `book_id`, title, sections, and topic order.
-- `assets/release-metadata.yml`, which defines display name, publish path, status, and latest flag.
+- `assets/release-metadata.yml`, which defines display name, publish path, status, latest flag, and the optional publish gate.
 
 `scripts/` owns validation, impact detection, and static output generation.
 
@@ -58,10 +58,10 @@ topics/<slug>.md
   -> rebuild those release outputs
 
 releases/<version>/**
-  -> rebuild only <version>
+  -> rebuild only <version> when publish is true
 
 snippets/**, templates/**, schemas/**, scripts/**, workflows
-  -> rebuild all release outputs
+  -> rebuild all release outputs with publish: true
 ```
 
 The detector is implemented in `scripts/detect-impacted-releases.js`. The builder accepts a targeted release list:
@@ -71,6 +71,18 @@ node scripts/build-site.js . --releases 20.0,21.0
 ```
 
 The GitHub Pages workflow intentionally builds a complete `site/` artifact before deployment. GitHub Pages artifact deployments replace the previous site, so a partial artifact would remove unimpacted release folders. Impact detection remains the source of truth for deciding whether a publish is necessary and for recording the affected release scope in the publish tag.
+
+When a release has `publish: false`, the production build restores that release's generated output from the latest publish tag that included the release and overlays current outputs only for releases with `publish: true`. This keeps already-published release pages online while preventing new topics or manifest changes from appearing in the frozen release.
+
+## Release Publish Gate
+
+Each `release-metadata.yml` file can include:
+
+```yml
+publish: true
+```
+
+Omitting `publish` is treated the same as `publish: true` for backward compatibility. Set `publish: false` while a release is frozen. Writers can merge reviewed topics and manifests to `main`, but the workflow skips current-branch updates for that release until the gate is changed to `publish: true`. The existing release output stays in the generated Pages artifact by being restored from the latest publish tag that included the release.
 
 ## Publish Tags
 

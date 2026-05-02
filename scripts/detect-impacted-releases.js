@@ -206,6 +206,16 @@ function manifestFilesForRelease(releaseRoot) {
     .filter((fileName) => fileName.endsWith(".yml") || fileName.endsWith(".yaml"));
 }
 
+function readReleaseMetadata(releaseRoot) {
+  const metadataPath = path.join(releaseRoot, "assets", "release-metadata.yml");
+  if (!fs.existsSync(metadataPath)) return {};
+  return parseYaml(fs.readFileSync(metadataPath, "utf8"));
+}
+
+function releasePublishEnabled(metadata) {
+  return metadata.publish !== false;
+}
+
 function loadReleases(repoRoot) {
   const releasesDir = path.join(repoRoot, "releases");
   if (!fs.existsSync(releasesDir)) return [];
@@ -215,6 +225,7 @@ function loadReleases(repoRoot) {
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
     .map((releaseName) => {
       const releaseRoot = path.join(releasesDir, releaseName);
+      const metadata = readReleaseMetadata(releaseRoot);
       const topicIds = manifestFilesForRelease(releaseRoot)
         .flatMap((manifestFile) => {
           const manifestPath = path.join(releaseRoot, "manifests", manifestFile);
@@ -223,33 +234,65 @@ function loadReleases(repoRoot) {
         });
       return {
         releaseName,
+        publishEnabled: releasePublishEnabled(metadata),
         topics: new Set(topicIds),
       };
     });
 }
 
 function allReleaseNames(releases) {
-  return releases.map((release) => release.releaseName);
+  return releases
+    .filter((release) => release.publishEnabled)
+    .map((release) => release.releaseName);
+}
+
+function releaseMetadataPath(releaseName) {
+  return `releases/${releaseName}/assets/release-metadata.yml`;
+}
+
+function readBaseReleasePublishEnabled(args, repoRoot, releaseName) {
+  if (!args.base) return null;
+
+  try {
+    const source = execFileSync("git", ["show", `${args.base}:${releaseMetadataPath(releaseName)}`], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+    return releasePublishEnabled(parseYaml(source));
+  } catch (_error) {
+    return false;
+  }
+}
+
+function publishGateChanged(args, repoRoot, release) {
+  const basePublishEnabled = readBaseReleasePublishEnabled(args, repoRoot, release.releaseName);
+  return basePublishEnabled !== null && basePublishEnabled !== release.publishEnabled;
 }
 
 function impactedReleasesForTopic(topic, releases) {
   return releases
+    .filter((release) => release.publishEnabled)
     .filter((release) => release.topics.has(topic.topicId))
     .filter((release) => topic.appliesTo.includes(release.releaseName))
     .map((release) => release.releaseName);
 }
 
-function detectImpacts(changedFiles, topics, releases) {
+function detectImpacts(changedFiles, topics, releases, args, repoRoot) {
   const impacted = new Set();
   const allReleases = allReleaseNames(releases);
 
   for (const filePath of changedFiles) {
     if (filePath.startsWith("releases/")) {
       const [, releaseName] = filePath.split("/");
-      if (releaseName && releases.some((release) => release.releaseName === releaseName)) {
-        impacted.add(releaseName);
+      const release = releases.find((candidate) => candidate.releaseName === releaseName);
+      if (release) {
+        if (filePath === releaseMetadataPath(releaseName) && publishGateChanged(args, repoRoot, release)) {
+          allReleases.forEach((publishedReleaseName) => impacted.add(publishedReleaseName));
+        } else if (release.publishEnabled) {
+          impacted.add(releaseName);
+        }
       } else {
-        allReleases.forEach((releaseName) => impacted.add(releaseName));
+        allReleases.forEach((publishedReleaseName) => impacted.add(publishedReleaseName));
       }
       continue;
     }
@@ -291,7 +334,7 @@ function main() {
   const topics = loadTopics(repoRoot);
   const releases = loadReleases(repoRoot);
   const changedFiles = args.all ? ["scripts/build-site.js"] : readChangedFiles(args, repoRoot);
-  const impacted = args.all ? allReleaseNames(releases) : detectImpacts(changedFiles, topics, releases);
+  const impacted = args.all ? allReleaseNames(releases) : detectImpacts(changedFiles, topics, releases, args, repoRoot);
   const impactedCsv = impacted.join(",");
 
   writeGitHubOutput({

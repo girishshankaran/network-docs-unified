@@ -37,6 +37,7 @@ const topicsDir = path.join(repoRoot, "topics");
 const releasesDir = path.join(repoRoot, "releases");
 const siteDir = path.join(repoRoot, "site");
 const selectedReleaseNames = parseReleaseList(args.releases || args.release || process.env.RELEASES);
+const includeFrozenReleases = args["include-frozen"] === true || process.env.INCLUDE_FROZEN_RELEASES === "true";
 const buildTimestamp = new Date().toISOString();
 const defaultManifestFile = "admin-guide.yml";
 
@@ -732,6 +733,10 @@ function releaseMatchesTopic(release, topic) {
   return (topic.lifecycle.applies_to || []).includes(release);
 }
 
+function releaseAcceptsUpdates(release) {
+  return release.metadata.publish !== false;
+}
+
 function topicIdsFromSections(sections) {
   return sections.flatMap((section) => section.topics || []);
 }
@@ -858,7 +863,7 @@ function renderHomePage(releases) {
       <section class="hero">
         <div class="eyebrow">Production publishing model</div>
         <h1>Release packages built from canonical content</h1>
-        <p>This site demonstrates the production Option 2 model: canonical topics live in a content repo, while release manifests and navigation live in a separate releases repo.</p>
+        <p>This site demonstrates the production Option 2 model: canonical topics and release manifests live in one repository with separate folders.</p>
         <div class="pill-row">
           <span class="pill">${releases.length} release packages</span>
           <span class="pill">Folder-based release management</span>
@@ -1086,6 +1091,7 @@ function main() {
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
     .map(loadReleaseConfig);
 
+  const updateableReleases = includeFrozenReleases ? allReleases : allReleases.filter(releaseAcceptsUpdates);
   const selectedSet = new Set(selectedReleaseNames);
   const unknownReleases = selectedReleaseNames.filter((releaseName) => !allReleases.some((release) => release.releaseName === releaseName));
   if (unknownReleases.length > 0) {
@@ -1093,9 +1099,13 @@ function main() {
     process.exit(1);
   }
 
+  const selectedReleases = allReleases.filter((release) => selectedSet.has(release.releaseName));
   const releasesToBuild = selectedReleaseNames.length > 0
-    ? allReleases.filter((release) => selectedSet.has(release.releaseName))
-    : allReleases;
+    ? updateableReleases.filter((release) => selectedSet.has(release.releaseName))
+    : updateableReleases;
+  const skippedReleases = selectedReleases
+    .filter((release) => !includeFrozenReleases && !releaseAcceptsUpdates(release))
+    .map((release) => release.releaseName);
 
   if (selectedReleaseNames.length === 0) {
     removeDir(siteDir);
@@ -1114,6 +1124,9 @@ function main() {
 
   fs.writeFileSync(path.join(siteDir, "index.html"), renderHomePage(allReleases));
   fs.writeFileSync(path.join(siteDir, ".nojekyll"), "");
+  if (skippedReleases.length > 0) {
+    console.log(`Skipped frozen release update(s): ${skippedReleases.join(", ")}`);
+  }
   console.log(`Built ${releasesToBuild.length} release output(s): ${releasesToBuild.map((release) => release.releaseName).join(", ") || "none"}`);
 }
 

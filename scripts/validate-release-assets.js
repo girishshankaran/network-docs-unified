@@ -414,6 +414,9 @@ function validateMetadata(releaseName, metadata, metadataPath, issues) {
   if (typeof metadata.latest !== "boolean") {
     issues.push(`${relative(metadataPath)}: latest must be true or false`);
   }
+  if (metadata.publish !== undefined && typeof metadata.publish !== "boolean") {
+    issues.push(`${relative(metadataPath)}: publish must be true or false when specified`);
+  }
 }
 
 function validateManifest(releaseName, manifest, manifestPath, topics, issues) {
