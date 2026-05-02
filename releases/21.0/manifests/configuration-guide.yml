@@ -6,7 +6,7 @@ sections:
     topics: ["NET-INTERFACE-DESCRIPTION-TASK-001"]
   - id: network-services
     title: Network services
-    topics: ["NET-NTP-TASK-001"]
+    topics: ["NET-NTP-TASK-001", "NET-DNS-TASK-001"]
   - id: monitoring
     title: Monitoring
     topics: ["NET-SNMP-TASK-001", "NET-SYSLOG-TASK-001"]

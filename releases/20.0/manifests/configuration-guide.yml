@@ -9,4 +9,4 @@ sections:
     topics: ["NET-STATIC-ROUTES-TASK-001"]
   - id: network-services
     title: Network services
-    topics: ["NET-NTP-TASK-001"]
+    topics: ["NET-NTP-TASK-001", "NET-DNS-TASK-001"]
