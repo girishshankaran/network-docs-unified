@@ -5,7 +5,7 @@
   "description": "Single-repository documentation publishing prototype with canonical topics and release assembly.",
   "scripts": {
     "validate": "node scripts/validate-content.js && node scripts/validate-release-assets.js .",
-    "suggest": "node scripts/suggest-release-updates.js .",
+    "suggest": "node scripts/suggest-missing-release-topics.js .",
     "impact": "node scripts/detect-impacted-releases.js .",
     "build": "node scripts/build-publish-site.js .",
     "build:current": "node scripts/build-site.js .",
