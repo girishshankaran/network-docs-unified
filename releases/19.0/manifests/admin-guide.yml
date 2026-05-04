@@ -15,7 +15,7 @@ sections:
     topics: ["NET-MIGRATING-NEW-VERSION-ROUTERS-TASK-001"]
   - id: deployment
     title: Deployment
-    topics: ["NET-IOSXR-DEPLOY-TASK-001"]
+    topics: ["NET-IOSXR-DEPLOY-TASK-001", "NET-INSTALL-IMAGES-ROUTERS-TASK-001"]
   - id: cleanup
     title: Cleanup
     topics: ["NET-DELETE-CONFIG-TASK-001"]

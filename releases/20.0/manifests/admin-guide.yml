@@ -15,7 +15,7 @@ sections:
     topics: ["NET-UPGRADE-TASK-001"]
   - id: deployment
     title: Deployment
-    topics: ["NET-IOSXR-DEPLOY-TASK-001"]
+    topics: ["NET-IOSXR-DEPLOY-TASK-001", "NET-INSTALL-IMAGES-ROUTERS-TASK-001"]
   - id: publish
     title: Publish
     topics: ["NET-CREATE-PUBLISH-API-TASK-001"]
