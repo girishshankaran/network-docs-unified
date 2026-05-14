@@ -1,5 +1,5 @@
 ---
-topic_id: NET-AUTHENTICATE-USERS-TASK-002
+topic_id: NET-AUTHENTICATE-USERS-TASK-003
 title: "Router Authentication Implementation Guide"
 short_title: "Router authentication"
 summary: "Configure authentication for routers."
@@ -16,9 +16,9 @@ lifecycle:
   introduced_in: "20.0"
   updated_in: []
   deprecated_in: null
-  status: replaced
-  replaced_by: NET-AUTHENTICATE-USERS-TASK-003
-  applies_to: ["20.0"]
+  status: active
+  replaced_by: null
+  applies_to: ["20.0", "21.0"]
 retrieval:
   is_canonical: true
   dedupe_key: "configure-auth-in-your-routers"
@@ -37,6 +37,8 @@ Always establish a local administrator account first to ensure access if remote 
 * **Username:** `admin`
 * **Privilege Level:** 15 (Full Access)
 * **Encryption:** Use `secret` instead of `password` for MD5/SHA hashing.
+
+This is another update from writer 2 from branch 2.
 
 ## 2. Remote Server Configuration
 Define the external identity provider (RADIUS or TACACS+).
