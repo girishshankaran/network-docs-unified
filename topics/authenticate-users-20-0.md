@@ -38,6 +38,8 @@ Always establish a local administrator account first to ensure access if remote 
 * **Privilege Level:** 15 (Full Access)
 * **Encryption:** Use `secret` instead of `password` for MD5/SHA hashing.
 
+This is another update from writer 2 from branch 2.
+
 ## 2. Remote Server Configuration
 Define the external identity provider (RADIUS or TACACS+).
 * **Protocol:** TACACS+ (Recommended for administrative command control).
