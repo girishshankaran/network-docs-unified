@@ -1,5 +1,5 @@
 ---
-topic_id: "NET-AUTHENTICATE-USERS-TASK-001"
+topic_id: NET-AUTHENTICATE-USERS-TASK-002
 title: "Router Authentication Implementation Guide"
 short_title: "Router authentication"
 summary: "Configure authentication for routers."
@@ -13,21 +13,22 @@ tags: ["alerts", "monitoring", "notifications"]
 owner: "Network Docs"
 last_reviewed: "2026-04-24"
 lifecycle:
-  introduced_in: "21.0"
+  introduced_in: "20.0"
   updated_in: []
   deprecated_in: null
-  status: replaced
-  replaced_by: NET-AUTHENTICATE-USERS-TASK-002
-  applies_to: ["20.0"]
+  status: active
+  replaced_by: null
+  applies_to: ["20.0", "21.0"]
 retrieval:
   is_canonical: true
   dedupe_key: "configure-auth-in-your-routers"
   allow_in_ai_results: true
 ---
-
 # Router Authentication Implementation Guide
 
 This guide outlines the standard procedure for configuring **AAA (Authentication, Authorization, and Accounting)** on network routing hardware.
+
+This is a change I have done for 20.0 file.
 
 ---
 
