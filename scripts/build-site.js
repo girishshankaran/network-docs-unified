@@ -1,4 +1,5 @@
 const fs = require("fs");
+const crypto = require("crypto");
 const path = require("path");
 
 function parseArgs(argv) {
@@ -55,6 +56,27 @@ function escapeHtml(value) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function normalizePath(filePath) {
+  return filePath.replace(/\\/g, "/");
+}
+
+function sha256(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function normalizeTopicBody(value) {
+  return String(value || "").replace(/\r\n/g, "\n").trim();
+}
+
+function topicRenderedContentHash(topic) {
+  return sha256(JSON.stringify({
+    title: topic.title || "",
+    summary: topic.summary || "",
+    content_type: topic.contentType || "",
+    body: normalizeTopicBody(topic.body),
+  }));
 }
 
 function inlineMarkdownToHtml(value) {
@@ -679,6 +701,7 @@ function loadTopics() {
     const { frontmatter, body } = parseFrontmatter(fs.readFileSync(fullPath, "utf8"));
     topics.set(frontmatter.topic_id, {
       slug: fileName.replace(/\.md$/, ""),
+      relativePath: normalizePath(path.relative(repoRoot, fullPath)),
       topicId: frontmatter.topic_id,
       title: frontmatter.title,
       shortTitle: frontmatter.short_title || frontmatter.title,
@@ -693,40 +716,11 @@ function loadTopics() {
       owner: frontmatter.owner || "",
       lastReviewed: frontmatter.last_reviewed || "",
       lifecycle: frontmatter.lifecycle || {},
+      retrieval: frontmatter.retrieval || {},
       body,
     });
   }
   return topics;
-}
-
-function compareVersions(left, right) {
-  const leftParts = left.split(".").map(Number);
-  const rightParts = right.split(".").map(Number);
-  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
-    const leftValue = leftParts[index] || 0;
-    const rightValue = rightParts[index] || 0;
-    if (leftValue < rightValue) return -1;
-    if (leftValue > rightValue) return 1;
-  }
-  return 0;
-}
-
-function releaseMatchesRange(release, range) {
-  if (range.endsWith("+")) return compareVersions(release, range.slice(0, -1)) >= 0;
-  if (range.includes("-")) {
-    const [start, end] = range.split("-");
-    return compareVersions(release, start) >= 0 && compareVersions(release, end) <= 0;
-  }
-  return release === range;
-}
-
-function renderVersionBlocks(markdown, release) {
-  return markdown
-    .replace(/:::version range="([^"]+)"\n([\s\S]*?)\n:::/g, (_match, range, content) => {
-      return releaseMatchesRange(release, range) ? content.trim() : "";
-    })
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
 }
 
 function releaseMatchesTopic(release, topic) {
@@ -804,6 +798,45 @@ function guideIndexPath(release, guide) {
 function topicPathForGuide(release, guide, topic) {
   const dirPath = guideDirPath(release, guide);
   return dirPath === "." ? `${topic.slug}.html` : `${dirPath}/${topic.slug}.html`;
+}
+
+function outputUrlPath(filePath) {
+  return `/${normalizePath(path.relative(siteDir, filePath))}`;
+}
+
+function ledgerEntry(outputPath, release, guide, topic) {
+  return {
+    release: release.releaseName,
+    guide_id: guide.bookId,
+    guide_title: guide.manifest.title,
+    topic_id: topic.topicId,
+    dedupe_key: topic.retrieval?.dedupe_key || null,
+    title: topic.title,
+    source_path: topic.relativePath,
+    output_path: normalizePath(path.relative(siteDir, outputPath)),
+    url_path: outputUrlPath(outputPath),
+    content_hash: topicRenderedContentHash(topic),
+  };
+}
+
+function writePublishLedger(ledger) {
+  ledger.topics.sort((left, right) => (
+    left.release.localeCompare(right.release, undefined, { numeric: true })
+    || left.guide_id.localeCompare(right.guide_id)
+    || left.topic_id.localeCompare(right.topic_id)
+  ));
+
+  fs.writeFileSync(
+    path.join(siteDir, "publish-ledger.json"),
+    `${JSON.stringify({
+      schema_version: 1,
+      generated_at: new Date().toISOString(),
+      source_commit: process.env.GITHUB_SHA || null,
+      workflow_run: process.env.GITHUB_RUN_ID || null,
+      topics: ledger.topics,
+    }, null, 2)}\n`,
+    "utf8"
+  );
 }
 
 function hrefFromDir(fromDir, targetPath) {
@@ -1014,7 +1047,7 @@ function renderTopicPage(topic, release, guide, releaseLinks, nav) {
         <div class="breadcrumbs"><a href="./index.html">${escapeHtml(breadcrumbLabel)}</a> · ${escapeHtml(guide.manifest.title)} · Topic ID <code>${escapeHtml(topic.topicId)}</code></div>
         ${topic.summary ? `<p>${escapeHtml(topic.summary)}</p>` : ""}
         ${metaItems ? `<div class="meta-grid">${metaItems}</div>` : ""}
-        ${markdownToHtml(renderVersionBlocks(topic.body, release.releaseName))}
+        ${markdownToHtml(topic.body)}
         ${topicNav}
       </div>
     </main>`,
@@ -1022,7 +1055,7 @@ function renderTopicPage(topic, release, guide, releaseLinks, nav) {
   );
 }
 
-function buildGuide(topics, release, guide, releases) {
+function buildGuide(topics, release, guide, releases, ledger) {
   const outputDir = outputDirForGuide(release, guide);
   ensureDir(outputDir);
 
@@ -1065,10 +1098,12 @@ function buildGuide(topics, release, guide, releases) {
     const topic = included.find((item) => item.topicId === orderedTopic.topicId);
     const previous = index > 0 ? orderedTopics[index - 1] : null;
     const next = index < orderedTopics.length - 1 ? orderedTopics[index + 1] : null;
+    const outputPath = path.join(outputDir, `${topic.slug}.html`);
     fs.writeFileSync(
-      path.join(outputDir, `${topic.slug}.html`),
+      outputPath,
       renderTopicPage(topic, release, guide, releaseLinks, { previous, next })
     );
+    ledger.topics.push(ledgerEntry(outputPath, release, guide, topic));
   }
 
   if (!guide.isDefault) {
@@ -1078,8 +1113,8 @@ function buildGuide(topics, release, guide, releases) {
   return { guide, sections };
 }
 
-function buildRelease(topics, release, releases) {
-  const guideOutputs = release.guides.map((guide) => buildGuide(topics, release, guide, releases));
+function buildRelease(topics, release, releases, ledger) {
+  const guideOutputs = release.guides.map((guide) => buildGuide(topics, release, guide, releases, ledger));
   const releaseDir = outputDirForGuide(release, defaultGuide(release));
   const releaseLinks = buildReleaseNav(releases, publishDirPath(release), release);
   fs.writeFileSync(path.join(releaseDir, "index.html"), renderReleasePage(release, guideOutputs, releaseLinks));
@@ -1117,12 +1152,14 @@ function main() {
   ensureDir(siteDir);
 
   const topics = loadTopics();
+  const ledger = { topics: [] };
 
   for (const release of releasesToBuild) {
-    buildRelease(topics, release, allReleases);
+    buildRelease(topics, release, allReleases, ledger);
   }
 
   fs.writeFileSync(path.join(siteDir, "index.html"), renderHomePage(allReleases));
+  writePublishLedger(ledger);
   fs.writeFileSync(path.join(siteDir, ".nojekyll"), "");
   if (skippedReleases.length > 0) {
     console.log(`Skipped frozen release update(s): ${skippedReleases.join(", ")}`);

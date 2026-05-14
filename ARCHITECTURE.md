@@ -24,9 +24,9 @@ network-docs-unified/
 
 `topics/` is the single source of truth for authored content. A topic is reusable across releases through frontmatter:
 
-- `topic_id` identifies the canonical topic.
+- `topic_id` identifies the exact topic variant selected by a release.
 - `lifecycle.applies_to` lists releases where the topic is valid.
-- `retrieval` stores canonical and AI-retrieval metadata.
+- `retrieval.dedupe_key` groups related variants of the same topic family for retrieval and governance.
 
 `releases/<version>/` owns release assembly. Each release has:
 
@@ -43,6 +43,28 @@ A topic appears in a release only when both conditions are true:
 2. The topic frontmatter includes the release in `lifecycle.applies_to`.
 
 This preserves canonical reuse while allowing each release to decide its own assembled navigation.
+
+## Topic ID Variants
+
+The topic ID strategy follows the products POC Approach B workflow for meaningful release-specific changes:
+
+```text
+topics/configure-ssh.md
+  topic_id: NET-SSH-TASK-001
+  dedupe_key: configure-ssh-access
+  applies_to: 19.0, 20.0
+
+topics/configure-ssh-21-0.md
+  topic_id: NET-SSH-TASK-002
+  dedupe_key: configure-ssh-access
+  applies_to: 21.0
+```
+
+The `dedupe_key` is the topic-family identity. The `topic_id` is the immutable release-selected variant identity. `scripts/create-topic-variant.js` creates the next numeric `topic_id` in the family, copies the source topic, narrows the older topic lifecycle, and can update release manifests.
+
+Inline version annotations are disallowed. Substantial release differences are represented as separate topic files in the same `dedupe_key` family, and the build renders the selected topic body without release-condition filtering.
+
+The build writes `site/publish-ledger.json` with each rendered topic output, including `topic_id`, `dedupe_key`, source path, output path, and rendered-content hash. `scripts/enforce-topic-id-policy.js` compares changed topics against the last published ledger and blocks in-place rendered-content edits for a `topic_id` that is already published for the same release.
 
 `admin-guide.yml` is the default guide manifest for a release. It continues to publish at the release root, such as `/20.0/`, so existing release URLs remain stable. Additional guide manifests publish under their `book_id`, such as `/20.0/configuration-guide/`.
 

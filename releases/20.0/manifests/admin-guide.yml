@@ -3,10 +3,10 @@ title: Admin Guide
 sections:
   - id: overview
     title: Overview
-    topics: ["NET-WHATS-NEW-CONCEPT-001"]
+    topics: ["NET-WHATS-NEW-CONCEPT-002"]
   - id: access
     title: Access
-    topics: ["NET-SSH-TASK-001", "NET-GENERATE-SSH-KEYS-TASK-001"]
+    topics: ["NET-SSH-TASK-002", "NET-GENERATE-SSH-KEYS-TASK-001"]
   - id: proxy
     title: Proxy
     topics: ["NET-PROXY-TASK-001"]

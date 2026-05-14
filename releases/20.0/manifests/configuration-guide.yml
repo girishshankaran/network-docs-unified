@@ -3,7 +3,7 @@ title: Config Guide
 sections:
   - id: interfaces
     title: Interface configuration
-    topics: ["NET-INTERFACE-DESCRIPTION-TASK-001"]
+    topics: ["NET-INTERFACE-DESCRIPTION-TASK-002"]
   - id: routing
     title: Routing configuration
     topics: ["NET-STATIC-ROUTES-TASK-001"]

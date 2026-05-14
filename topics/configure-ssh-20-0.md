@@ -1,5 +1,5 @@
 ---
-topic_id: NET-SSH-TASK-001
+topic_id: NET-SSH-TASK-002
 title: Configure SSH access
 short_title: Configure SSH
 summary: Enable secure shell access for operational administrators who need command-line connectivity to routers.
@@ -13,12 +13,12 @@ tags: ["ssh", "access", "security"]
 owner: Network Docs
 last_reviewed: "2026-04-23"
 lifecycle:
-  introduced_in: "19.0"
+  introduced_in: "20.0"
   updated_in: []
   deprecated_in: null
   status: active
-  replaced_by: NET-SSH-TASK-002
-  applies_to: ["19.0"]
+  replaced_by: null
+  applies_to: ["20.0", "21.0"]
 retrieval:
   is_canonical: true
   dedupe_key: configure-ssh-access
@@ -31,9 +31,9 @@ Use this procedure to enable SSH access on the router.
 
 ## Steps
 
-1. Open **Configuration > Device Settings**.
-2. Enable **SSH Server**.
-3. Save the running configuration.
+1. Open **Configuration > Security > Access**.
+2. Turn on **SSH Access**.
+3. Apply the policy.
 
 ## Verification
 

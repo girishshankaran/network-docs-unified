@@ -1,5 +1,5 @@
 ---
-topic_id: "NET-CREATE-PUBLISH-API-TASK-001"
+topic_id: NET-CREATE-PUBLISH-API-TASK-002
 title: Create and publish API documentation in PubHub
 short_title: Publish API Documentation
 summary: Create an API documentation site from the OpenAPI Template Project
@@ -13,12 +13,12 @@ tags: ["ssh", "access", "security"]
 owner: Network Docs
 last_reviewed: "2026-04-23"
 lifecycle:
-  introduced_in: "20.0"
+  introduced_in: "21.0"
   updated_in: []
   deprecated_in: null
   status: active
-  replaced_by: NET-CREATE-PUBLISH-API-TASK-002
-  applies_to: ["20.0"]
+  replaced_by: null
+  applies_to: ["21.0"]
 retrieval:
   is_canonical: true
   dedupe_key: create-and-publish-api-docs
@@ -67,7 +67,7 @@ The generated repository includes the standard folders for an API documentation 
 
 The site is updated in PubHub and submitted for publication with the latest OpenAPI file and user-facing content.
 
-## What to review before publication
+## Before you publish
 
 Review the following items before you request publication:
 

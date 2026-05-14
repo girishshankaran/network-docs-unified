@@ -9,6 +9,8 @@
     "impact": "node scripts/detect-impacted-releases.js .",
     "build": "node scripts/build-publish-site.js .",
     "build:current": "node scripts/build-site.js .",
-    "build:release": "node scripts/build-site.js . --releases"
+    "build:release": "node scripts/build-site.js . --releases",
+    "create:topic-variant": "node scripts/create-topic-variant.js .",
+    "enforce:topic-policy": "node scripts/enforce-topic-id-policy.js ."
   }
 }

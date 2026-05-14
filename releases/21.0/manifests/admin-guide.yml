@@ -3,7 +3,7 @@ title: Admin Guide
 sections:
   - id: access
     title: Access
-    topics: ["NET-SSH-TASK-001"]
+    topics: ["NET-SSH-TASK-002"]
   - id: proxy
     title: Proxy
     topics: ["NET-PROXY-TASK-001"]
@@ -18,7 +18,7 @@ sections:
     topics: ["NET-CONFIGURE-ALERTS-ROUTERS-TASK-001"]
   - id: publish
     title: Publish
-    topics: ["NET-CREATE-PUBLISH-API-TASK-001"]
+    topics: ["NET-CREATE-PUBLISH-API-TASK-002"]
   - id: authenticate
     title: Authenticate
     topics: ["NET-AUTHENTICATE-USERS-TASK-001"]

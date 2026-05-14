@@ -210,54 +210,6 @@ function loadTopics(issues) {
   return topics;
 }
 
-function compareVersions(left, right) {
-  const leftParts = left.split(".").map(Number);
-  const rightParts = right.split(".").map(Number);
-  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
-    const leftValue = leftParts[index] || 0;
-    const rightValue = rightParts[index] || 0;
-    if (leftValue < rightValue) return -1;
-    if (leftValue > rightValue) return 1;
-  }
-  return 0;
-}
-
-function releaseMatchesRange(release, range) {
-  if (range.endsWith("+")) return compareVersions(release, range.slice(0, -1)) >= 0;
-  if (range.includes("-")) {
-    const [start, end] = range.split("-");
-    return compareVersions(release, start) >= 0 && compareVersions(release, end) <= 0;
-  }
-  return release === range;
-}
-
-function parseVersionRange(range) {
-  if (!range) {
-    return { error: 'expected a non-empty range, such as "19.0", "20.0+", or "19.0-21.0"' };
-  }
-
-  const exactMatch = range.match(new RegExp(`^${versionPattern}$`));
-  if (exactMatch) {
-    return { endpoints: [range] };
-  }
-
-  const openEndedMatch = range.match(new RegExp(`^(${versionPattern})\\+$`));
-  if (openEndedMatch) {
-    return { endpoints: [openEndedMatch[1]] };
-  }
-
-  const closedRangeMatch = range.match(new RegExp(`^(${versionPattern})-(${versionPattern})$`));
-  if (closedRangeMatch) {
-    const [, start, end] = closedRangeMatch;
-    if (compareVersions(start, end) > 0) {
-      return { error: `range start "${start}" must be less than or equal to range end "${end}"` };
-    }
-    return { endpoints: [start, end] };
-  }
-
-  return { error: 'expected range syntax "19.0", "20.0+", or "19.0-21.0"' };
-}
-
 function findVersionBlocks(topic) {
   const blocks = [];
   const lines = topic.body.split(/\r?\n/);
@@ -313,42 +265,15 @@ function findVersionBlocks(topic) {
   return blocks;
 }
 
-function validateVersionBlocks(topics, releaseNames, issues) {
-  const knownReleaseSet = new Set(releaseNames);
-  const knownReleaseList = releaseNames.join(", ");
-
+function validateVersionBlocks(topics, _releaseNames, issues) {
   for (const topic of topics.values()) {
-    const appliesTo = Array.isArray(topic.appliesTo) ? topic.appliesTo : [];
-    const appliesToSet = new Set(appliesTo);
-
     for (const block of findVersionBlocks(topic)) {
       const label = `${relative(topic.path)}:${block.lineNumber}`;
       if (block.issue) {
         issues.push(`${label}: ${block.issue}`);
         continue;
       }
-
-      const parsedRange = parseVersionRange(block.range);
-      if (parsedRange.error) {
-        issues.push(`${label}: invalid version range "${block.range}": ${parsedRange.error}`);
-        continue;
-      }
-
-      const matchingReleases = releaseNames.filter((releaseName) => releaseMatchesRange(releaseName, block.range));
-      if (matchingReleases.length === 0) {
-        issues.push(`${label}: version range "${block.range}" does not match any known release (${knownReleaseList})`);
-        continue;
-      }
-
-      const unknownEndpoints = parsedRange.endpoints.filter((endpoint) => !knownReleaseSet.has(endpoint));
-      if (unknownEndpoints.length > 0) {
-        issues.push(`${label}: version range "${block.range}" uses unknown endpoint(s) ${unknownEndpoints.join(", ")}; known releases are ${knownReleaseList}`);
-      }
-
-      const outsideApplicability = matchingReleases.filter((releaseName) => !appliesToSet.has(releaseName));
-      if (outsideApplicability.length > 0) {
-        issues.push(`${label}: version range "${block.range}" includes release(s) ${outsideApplicability.join(", ")} outside lifecycle.applies_to [${appliesTo.join(", ")}]`);
-      }
+      issues.push(`${label}: inline version annotations are not allowed; create a new topic file with a new topic_id and the same retrieval.dedupe_key`);
     }
   }
 }

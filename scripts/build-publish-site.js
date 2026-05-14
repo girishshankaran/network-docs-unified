@@ -139,6 +139,37 @@ function copyDir(source, target) {
   fs.cpSync(source, target, { recursive: true });
 }
 
+function readPublishLedger(repoRoot) {
+  const ledgerPath = path.join(repoRoot, "site", "publish-ledger.json");
+  if (!fs.existsSync(ledgerPath)) return { topics: [] };
+  return JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
+}
+
+function writePublishLedger(repoRoot, ledger) {
+  const topics = [...(ledger.topics || [])].sort((left, right) => (
+    left.release.localeCompare(right.release, undefined, { numeric: true })
+    || left.guide_id.localeCompare(right.guide_id)
+    || left.topic_id.localeCompare(right.topic_id)
+  ));
+
+  fs.writeFileSync(
+    path.join(repoRoot, "site", "publish-ledger.json"),
+    `${JSON.stringify({
+      schema_version: 1,
+      generated_at: new Date().toISOString(),
+      source_commit: process.env.GITHUB_SHA || null,
+      workflow_run: process.env.GITHUB_RUN_ID || null,
+      topics,
+    }, null, 2)}\n`,
+    "utf8"
+  );
+}
+
+function mergeLedgerEntriesForRelease(targetLedger, sourceLedger, releaseName) {
+  targetLedger.topics = (targetLedger.topics || []).filter((entry) => entry.release !== releaseName);
+  targetLedger.topics.push(...(sourceLedger.topics || []).filter((entry) => entry.release === releaseName));
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const repoRoot = path.resolve(args.root || args._[0] || ".");
@@ -163,6 +194,7 @@ function main() {
 
   try {
     run("node", ["scripts/build-site.js", "."], repoRoot);
+    const combinedLedger = readPublishLedger(repoRoot);
 
     for (const release of frozen) {
       if (!release.sourceTag) {
@@ -178,6 +210,7 @@ function main() {
       }
 
       run("node", ["scripts/build-site.js", ".", "--releases", release.releaseName, "--include-frozen"], snapshotRoot);
+      mergeLedgerEntriesForRelease(combinedLedger, readPublishLedger(snapshotRoot), release.releaseName);
       const snapshotMetadata = releaseMetadata(snapshotRoot, release.releaseName);
       copyDir(
         outputDirForRelease(snapshotRoot, snapshotMetadata, release.releaseName),
@@ -186,6 +219,8 @@ function main() {
 
       console.log(`Preserved frozen release output from ${release.sourceTag}: ${release.releaseName}`);
     }
+
+    writePublishLedger(repoRoot, combinedLedger);
   } finally {
     for (const snapshotRoot of worktrees.values()) {
       try {

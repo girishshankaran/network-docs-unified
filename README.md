@@ -21,6 +21,25 @@ The sample content is copied from the existing two-repo implementation and uses 
 
 There are no feature-specific release branches in this model. Publish history is recovered through Git tags such as `publish-20260430-21.0-123-abcdef123456`.
 
+## Topic ID Variant Strategy
+
+Meaningful release-specific topic updates should create a new topic file and a new `topic_id` instead of changing an already-published topic in place. Related variants keep the same `retrieval.dedupe_key`, and release manifests select the exact topic variant that belongs in each release.
+
+Inline version annotations such as `:::version range="20.0"` are not part of this model. Validation fails when a topic contains them.
+
+Create a variant from an existing topic:
+
+```sh
+node scripts/create-topic-variant.js . \
+  --from-topic NET-PROXY-TASK-001 \
+  --release 21.0 \
+  --update-manifests
+```
+
+The script copies the source topic, assigns the next numeric `topic_id` in that topic family, keeps the same `retrieval.dedupe_key`, narrows the older topic lifecycle, points `lifecycle.replaced_by` at the new variant, and updates target release manifests when `--update-manifests` is used. Use `--dry-run` to preview the plan.
+
+The production build writes `site/publish-ledger.json`. CI uses that ledger to identify topics that have actually been published. If rendered content for a published `topic_id` changes while that same ID is still selected for a release, `scripts/enforce-topic-id-policy.js` fails and instructs the author to create a new variant.
+
 Release metadata controls whether a release accepts current-branch publishing updates:
 
 ```yml
@@ -47,6 +66,18 @@ Build the production Pages artifact:
 
 ```sh
 npm run build
+```
+
+Create a release-specific topic variant:
+
+```sh
+npm run create:topic-variant -- --from-topic NET-PROXY-TASK-001 --release 21.0 --update-manifests
+```
+
+Check changed topics against a publish ledger:
+
+```sh
+npm run enforce:topic-policy -- --ledger site/publish-ledger.json --files topics/configure-ssh.md
 ```
 
 Build all release outputs directly from the current workspace:

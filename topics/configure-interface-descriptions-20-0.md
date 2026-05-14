@@ -1,5 +1,5 @@
 ---
-topic_id: NET-INTERFACE-DESCRIPTION-TASK-001
+topic_id: NET-INTERFACE-DESCRIPTION-TASK-002
 title: Configure interface descriptions
 short_title: Configure interface descriptions
 summary: Add interface descriptions that help operators identify links, circuits, and connected devices.
@@ -13,12 +13,12 @@ tags: ["interfaces", "configuration", "inventory"]
 owner: Network Docs
 last_reviewed: "2026-05-01"
 lifecycle:
-  introduced_in: "19.0"
+  introduced_in: "20.0"
   updated_in: []
   deprecated_in: null
   status: active
-  replaced_by: NET-INTERFACE-DESCRIPTION-TASK-002
-  applies_to: ["19.0"]
+  replaced_by: null
+  applies_to: ["20.0", "21.0"]
 retrieval:
   is_canonical: true
   dedupe_key: configure-interface-descriptions
@@ -36,10 +36,11 @@ Use this procedure to add descriptions to router interfaces so operators can ide
 
 ## Steps
 
-1. Open **Configuration > Device Settings > Interfaces**.
-2. Select the interface that you want to update.
+1. Open **Configuration > Interfaces**.
+2. Select the router and interface that you want to update.
 3. Enter a description that identifies the peer, circuit, or service.
-4. Save the running configuration.
+4. Review the pending configuration.
+5. Save and deploy the interface update.
 
 ## Verification
 
