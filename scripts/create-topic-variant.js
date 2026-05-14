@@ -7,6 +7,7 @@ const {
   parseArgs,
   releaseById,
   slugify,
+  topicIdsFromSections,
 } = require("./common");
 
 function usage() {
@@ -164,6 +165,42 @@ function plannedManifestUpdates(model, sourceTopic, newTopicId, targetReleaseNam
   return updates;
 }
 
+function selectedFamilyVariants(model, familyTopics, sourceTopic, targetReleaseNames) {
+  const familyById = new Map(familyTopics.map((topic) => [topic.topicId, topic]));
+  const targetSet = new Set(targetReleaseNames);
+  const selected = new Map();
+
+  for (const release of model.releases) {
+    if (!targetSet.has(release.releaseName)) continue;
+    for (const guide of release.guides) {
+      for (const topicId of topicIdsFromSections(guide.manifest.sections)) {
+        const topic = familyById.get(topicId);
+        if (!topic || topic.topicId === sourceTopic.topicId) continue;
+        const key = `${release.releaseName}\u0000${topic.topicId}\u0000${guide.manifestPath}`;
+        selected.set(key, { release, guide, topic });
+      }
+    }
+  }
+
+  return [...selected.values()];
+}
+
+function failIfTargetAlreadyHasVariant(repoRoot, model, familyTopics, sourceTopic, targetReleaseNames, updateManifests) {
+  const selected = selectedFamilyVariants(model, familyTopics, sourceTopic, targetReleaseNames);
+  if (selected.length === 0) return;
+
+  console.error("Target release manifest(s) already select another topic variant in this dedupe_key family:");
+  for (const item of selected) {
+    console.error(`- ${item.release.releaseName}: ${path.relative(repoRoot, item.guide.manifestPath)} selects ${item.topic.topicId} (${item.topic.relativePath})`);
+  }
+
+  const nextSource = selected[0].topic.topicId;
+  const targetList = targetReleaseNames.join(",");
+  console.error("This usually means another writer's variant merged first. Rebase or merge the latest main, review the selected variant, then merge your changes there if it is unpublished or create a superseding variant from that topic.");
+  console.error(`Suggested command: node scripts/create-topic-variant.js . --from-topic ${nextSource} --release ${targetReleaseNames[0]}${targetReleaseNames.length > 1 ? ` --releases ${targetList}` : ""}${updateManifests ? " --update-manifests" : ""}`);
+  process.exit(1);
+}
+
 function defaultTargetReleases(model, sourceTopic, releaseName) {
   const release = releaseById(model, releaseName);
   const currentAppliesTo = applicableReleaseNames(model, sourceTopic);
@@ -216,6 +253,8 @@ function main() {
   }
 
   const familyTopics = [...topics.values()].filter((topic) => topic.retrieval?.dedupe_key === sourceTopic.retrieval.dedupe_key);
+  failIfTargetAlreadyHasVariant(repoRoot, model, familyTopics, sourceTopic, targetReleases, updateManifests);
+
   const newTopicId = args["topic-id"] || nextTopicId(sourceTopic, familyTopics);
   if (topics.has(newTopicId)) {
     console.error(`Topic already exists: ${newTopicId}`);
@@ -226,6 +265,7 @@ function main() {
   const outputPath = path.join(model.topicsDir, `${outputSlug}.md`);
   if (fs.existsSync(outputPath)) {
     console.error(`Topic file already exists: ${path.relative(repoRoot, outputPath)}`);
+    console.error("Rebase or merge the latest main, then rerun from the topic variant currently selected by the target release manifest.");
     process.exit(1);
   }
 
