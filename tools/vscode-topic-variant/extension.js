@@ -1,4 +1,5 @@
 const cp = require("child_process");
+const fs = require("fs");
 const path = require("path");
 const vscode = require("vscode");
 
@@ -34,9 +35,17 @@ function validateTopicFile(workspaceFolder, uri) {
   return relPath;
 }
 
-function runScript(workspaceFolder, args) {
+function nodeCommand() {
+  const configured = process.env.NETWORK_DOCS_NODE_PATH;
+  if (configured && fs.existsSync(configured)) return configured;
+
+  const candidates = ["/opt/homebrew/bin/node", "/usr/local/bin/node", "/usr/bin/node"];
+  return candidates.find((candidate) => fs.existsSync(candidate)) || "node";
+}
+
+function runScript(workspaceFolder, command, args) {
   return new Promise((resolve, reject) => {
-    const child = cp.spawn("node", args, {
+    const child = cp.spawn(command, args, {
       cwd: workspaceFolder.uri.fsPath,
       shell: false,
     });
@@ -49,7 +58,17 @@ function runScript(workspaceFolder, args) {
     child.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
     });
-    child.on("error", reject);
+    child.on("error", (error) => {
+      if (error.code === "ENOENT") {
+        reject(
+          new Error(
+            `Could not start Node.js at "${command}". Install Node.js or set NETWORK_DOCS_NODE_PATH to the node executable.`
+          )
+        );
+        return;
+      }
+      reject(error);
+    });
     child.on("close", (code) => {
       if (code === 0) {
         resolve({ stdout, stderr });
@@ -130,11 +149,12 @@ async function createTopicVariant(uri) {
     if (mode.updateManifests) args.push("--update-manifests");
     if (mode.dryRun) args.push("--dry-run");
 
+    const command = nodeCommand();
     channel.clear();
-    channel.appendLine(`$ node ${args.join(" ")}`);
+    channel.appendLine(`$ ${command} ${args.join(" ")}`);
     channel.show(true);
 
-    const result = await runScript(workspaceFolder, args);
+    const result = await runScript(workspaceFolder, command, args);
     if (result.stdout) channel.append(result.stdout);
     if (result.stderr) channel.append(result.stderr);
 

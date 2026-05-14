@@ -10,7 +10,27 @@ node scripts/create-topic-variant.js . --from-file <selected-topic> --release <r
 
 All topic ID, lifecycle, manifest, and concurrent-writer rules stay in `scripts/create-topic-variant.js`.
 
-## Local Demo
+## Install for Normal Repo Use
+
+Install the extension once into your local VS Code extensions directory:
+
+```sh
+sh tools/vscode-topic-variant/install-local.sh
+```
+
+Then restart VS Code or run **Developer: Reload Window**.
+
+After that, open the main `network-docs-unified` repository, not this extension folder. Right-click any Markdown file under `topics/` and select **Create Topic Variant**.
+
+The extension uses the open workspace as the repository root and calls:
+
+```sh
+node scripts/create-topic-variant.js . --from-file <selected-topic> --release <release>
+```
+
+If VS Code cannot find Node.js because it was launched from the Dock, set `NETWORK_DOCS_NODE_PATH` to the full path of the `node` executable before starting VS Code. The extension also checks common macOS locations such as `/opt/homebrew/bin/node`, `/usr/local/bin/node`, and `/usr/bin/node`.
+
+## Extension Development
 
 1. Open this extension folder in VS Code:
 

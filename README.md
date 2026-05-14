@@ -78,9 +78,14 @@ npm run create:topic-variant -- --from-file topics/configure-proxy.md --release 
 
 Create a variant from VS Code:
 
-1. Open `tools/vscode-topic-variant` in VS Code.
-2. Press `F5` to launch an Extension Development Host.
-3. In the Extension Development Host, open this repository.
+1. Install the repo-local VS Code extension once:
+
+   ```sh
+   sh tools/vscode-topic-variant/install-local.sh
+   ```
+
+2. Restart VS Code or run **Developer: Reload Window**.
+3. Open this repository in VS Code.
 4. Right-click a Markdown file under `topics/`.
 5. Select **Create Topic Variant**.
 
