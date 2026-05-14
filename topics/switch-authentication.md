@@ -21,7 +21,7 @@ lifecycle:
   applies_to: ["20.0","21.0"]
 retrieval:
   is_canonical: true
-  dedupe_key: "configure-alerts-in-your-routers"
+  dedupe_key: "switch-authentication"
   allow_in_ai_results: true
 ---
 

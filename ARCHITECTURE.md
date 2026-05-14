@@ -64,6 +64,8 @@ The `dedupe_key` is the topic-family identity. The `topic_id` is the immutable r
 
 Inline version annotations are disallowed. Substantial release differences are represented as separate topic files in the same `dedupe_key` family, and the build renders the selected topic body without release-condition filtering.
 
+A release can select only one `topic_id` per `retrieval.dedupe_key` family. When concurrent branches create substantial changes for the same topic and release, the branch that merges second must rebase and merge its content into the already-selected variant file.
+
 The build writes `site/publish-ledger.json` with each rendered topic output, including `topic_id`, `dedupe_key`, source path, output path, and rendered-content hash. `scripts/enforce-topic-id-policy.js` compares changed topics against the last published ledger and blocks in-place rendered-content edits for a `topic_id` that is already published for the same release.
 
 `admin-guide.yml` is the default guide manifest for a release. It continues to publish at the release root, such as `/20.0/`, so existing release URLs remain stable. Additional guide manifests publish under their `book_id`, such as `/20.0/configuration-guide/`.

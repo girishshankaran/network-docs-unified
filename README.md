@@ -38,7 +38,7 @@ node scripts/create-topic-variant.js . \
 
 The script copies the source topic, assigns the next numeric `topic_id` in that topic family, keeps the same `retrieval.dedupe_key`, narrows the older topic lifecycle, points `lifecycle.replaced_by` at the new variant, and updates target release manifests when `--update-manifests` is used. Use `--dry-run` to preview the plan.
 
-If two writers create a variant from the same topic on separate branches, the first merged branch owns the next `topic_id` and release manifest selection. The second writer should rebase or merge the latest `main` and rerun the command. If the target release already selects another variant in the same `dedupe_key` family, the script stops and prints the topic ID that should be reviewed or used as the new source for a superseding variant.
+If two writers create a variant from the same topic on separate branches, the first merged branch owns the next `topic_id` and release manifest selection. The second writer should rebase or merge the latest `main`, review the selected variant, and merge their change into that file. A release can select only one `topic_id` per `retrieval.dedupe_key` family, so the script stops instead of creating another variant when the target release already has one.
 
 The production build writes `site/publish-ledger.json`. CI uses that ledger to identify topics that have actually been published. If rendered content for a published `topic_id` changes while that same ID is still selected for a release, `scripts/enforce-topic-id-policy.js` fails and instructs the author to create a new variant.
 

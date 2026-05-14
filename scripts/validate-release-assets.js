@@ -197,9 +197,16 @@ function loadTopics(issues) {
     }
 
     const appliesTo = frontmatter.lifecycle?.applies_to;
+    const dedupeKey = frontmatter.retrieval?.dedupe_key;
+    if (!dedupeKey || typeof dedupeKey !== "string") {
+      issues.push(`${relative(fullPath)}: missing retrieval.dedupe_key`);
+    }
+
     topics.set(topicId, {
       path: fullPath,
+      topicId,
       title: frontmatter.title || topicId,
+      dedupeKey,
       appliesTo: Array.isArray(appliesTo) ? appliesTo : [],
       rawAppliesTo: appliesTo,
       body,
@@ -344,7 +351,7 @@ function validateMetadata(releaseName, metadata, metadataPath, issues) {
   }
 }
 
-function validateManifest(releaseName, manifest, manifestPath, topics, issues) {
+function validateManifest(releaseName, manifest, manifestPath, topics, releaseDedupeSelections, issues) {
   if (!manifest.book_id) {
     issues.push(`${relative(manifestPath)}: missing book_id`);
   } else if (!bookIdPattern.test(manifest.book_id)) {
@@ -388,6 +395,14 @@ function validateManifest(releaseName, manifest, manifestPath, topics, issues) {
       }
       if (!topic.appliesTo.includes(releaseName)) {
         issues.push(`${relative(manifestPath)}: section "${section.id || "(missing id)"}" references topic "${topicId}" for ${releaseName} but applies_to is [${topic.appliesTo.join(", ")}]`);
+      }
+      if (topic.dedupeKey) {
+        const existing = releaseDedupeSelections.get(topic.dedupeKey);
+        if (existing && existing.topicId !== topic.topicId) {
+          issues.push(`${relative(manifestPath)}: release ${releaseName} selects multiple topic variants with retrieval.dedupe_key "${topic.dedupeKey}" (${existing.topicId} in ${relative(existing.manifestPath)}, ${topic.topicId})`);
+        } else if (!existing) {
+          releaseDedupeSelections.set(topic.dedupeKey, { topicId: topic.topicId, manifestPath });
+        }
       }
     }
   }
@@ -444,6 +459,7 @@ function main() {
 
       validateMetadata(releaseName, metadata, metadataPath, issues);
       const bookIds = new Map();
+      const releaseDedupeSelections = new Map();
       for (const manifestFile of manifestFiles) {
         const manifestPath = path.join(manifestsDir, manifestFile);
         let manifest;
@@ -460,7 +476,7 @@ function main() {
             bookIds.set(manifest.book_id, manifestPath);
           }
         }
-        validateManifest(releaseName, manifest, manifestPath, topics, issues);
+        validateManifest(releaseName, manifest, manifestPath, topics, releaseDedupeSelections, issues);
       }
       if (metadata.latest === true) latestReleases.push(releaseName);
     }

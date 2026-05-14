@@ -185,7 +185,7 @@ function selectedFamilyVariants(model, familyTopics, sourceTopic, targetReleaseN
   return [...selected.values()];
 }
 
-function failIfTargetAlreadyHasVariant(repoRoot, model, familyTopics, sourceTopic, targetReleaseNames, updateManifests) {
+function failIfTargetAlreadyHasVariant(repoRoot, model, familyTopics, sourceTopic, targetReleaseNames) {
   const selected = selectedFamilyVariants(model, familyTopics, sourceTopic, targetReleaseNames);
   if (selected.length === 0) return;
 
@@ -194,10 +194,8 @@ function failIfTargetAlreadyHasVariant(repoRoot, model, familyTopics, sourceTopi
     console.error(`- ${item.release.releaseName}: ${path.relative(repoRoot, item.guide.manifestPath)} selects ${item.topic.topicId} (${item.topic.relativePath})`);
   }
 
-  const nextSource = selected[0].topic.topicId;
-  const targetList = targetReleaseNames.join(",");
-  console.error("This usually means another writer's variant merged first. Rebase or merge the latest main, review the selected variant, then merge your changes there if it is unpublished or create a superseding variant from that topic.");
-  console.error(`Suggested command: node scripts/create-topic-variant.js . --from-topic ${nextSource} --release ${targetReleaseNames[0]}${targetReleaseNames.length > 1 ? ` --releases ${targetList}` : ""}${updateManifests ? " --update-manifests" : ""}`);
+  console.error("This usually means another writer's variant merged first. A release can select only one topic_id per dedupe_key family.");
+  console.error(`Rebase or merge the latest main, then edit the selected variant file instead of creating another variant for ${targetReleaseNames.join(", ")}.`);
   process.exit(1);
 }
 
@@ -253,7 +251,7 @@ function main() {
   }
 
   const familyTopics = [...topics.values()].filter((topic) => topic.retrieval?.dedupe_key === sourceTopic.retrieval.dedupe_key);
-  failIfTargetAlreadyHasVariant(repoRoot, model, familyTopics, sourceTopic, targetReleases, updateManifests);
+  failIfTargetAlreadyHasVariant(repoRoot, model, familyTopics, sourceTopic, targetReleases);
 
   const newTopicId = args["topic-id"] || nextTopicId(sourceTopic, familyTopics);
   if (topics.has(newTopicId)) {
@@ -265,7 +263,7 @@ function main() {
   const outputPath = path.join(model.topicsDir, `${outputSlug}.md`);
   if (fs.existsSync(outputPath)) {
     console.error(`Topic file already exists: ${path.relative(repoRoot, outputPath)}`);
-    console.error("Rebase or merge the latest main, then rerun from the topic variant currently selected by the target release manifest.");
+    console.error("Rebase or merge the latest main, then edit the existing topic file for this release instead of creating another variant.");
     process.exit(1);
   }
 
