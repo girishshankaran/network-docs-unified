@@ -4,7 +4,9 @@ const {
   applicableReleaseNames,
   loadContentModel,
   loadTopics,
+  normalizePath,
   parseArgs,
+  parseTopicDocument,
   releaseById,
   slugify,
   topicIdsFromSections,
@@ -15,6 +17,7 @@ function usage() {
 node scripts/create-topic-variant.js . \\
   --from-topic NET-PROXY-TASK-001 \\
   --release 21.0 \\
+  [--from-file topics/configure-proxy.md] \\
   [--releases 21.0,22.0] \\
   [--slug configure-proxy-21-0] \\
   [--topic-id NET-PROXY-TASK-002] \\
@@ -209,10 +212,46 @@ function defaultTargetReleases(model, sourceTopic, releaseName) {
   return targets.length > 0 ? targets : [releaseName];
 }
 
+function topicIdFromFile(repoRoot, fromFile) {
+  const fullPath = path.resolve(repoRoot, String(fromFile));
+  const relativePath = normalizePath(path.relative(repoRoot, fullPath));
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw new Error(`--from-file must be inside the repository: ${fromFile}`);
+  }
+  if (!relativePath.startsWith("topics/") || !relativePath.endsWith(".md")) {
+    throw new Error(`--from-file must point to a topic markdown file under topics/: ${relativePath}`);
+  }
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`Topic file not found: ${relativePath}`);
+  }
+
+  const topicDocument = parseTopicDocument(fs.readFileSync(fullPath, "utf8"));
+  const topicId = topicDocument.frontmatter.topic_id;
+  if (!topicId) throw new Error(`${relativePath} is missing topic_id`);
+  return topicId;
+}
+
+function sourceTopicIdFromArgs(repoRoot, args) {
+  const fromTopicId = args["from-topic"];
+  const fromFile = args["from-file"];
+  if (fromTopicId && fromFile) {
+    throw new Error("Use either --from-topic or --from-file, not both.");
+  }
+  if (fromTopicId) return fromTopicId;
+  if (fromFile) return topicIdFromFile(repoRoot, fromFile);
+  return null;
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const repoRoot = path.resolve(args.root || args._[0] || ".");
-  const fromTopicId = args["from-topic"];
+  let fromTopicId;
+  try {
+    fromTopicId = sourceTopicIdFromArgs(repoRoot, args);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
   const releaseName = args.release;
   const dryRun = args["dry-run"] === true;
   const updateManifests = args["update-manifests"] === true;

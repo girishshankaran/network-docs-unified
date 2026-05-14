@@ -1,0 +1,47 @@
+{
+  "name": "network-docs-topic-variant",
+  "displayName": "Network Docs Topic Variant",
+  "description": "Create release-specific topic variants from the VS Code Explorer context menu.",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "network-docs",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:networkDocs.createTopicVariant"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "networkDocs.createTopicVariant",
+        "title": "Create Topic Variant"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "networkDocs.createTopicVariant"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "networkDocs.createTopicVariant",
+          "when": "resourceExtname == .md",
+          "group": "navigation@20"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "networkDocs.createTopicVariant",
+          "when": "resourceExtname == .md",
+          "group": "navigation@20"
+        }
+      ]
+    }
+  }
+}

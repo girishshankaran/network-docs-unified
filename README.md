@@ -31,7 +31,7 @@ Create a variant from an existing topic:
 
 ```sh
 node scripts/create-topic-variant.js . \
-  --from-topic NET-PROXY-TASK-001 \
+  --from-file topics/configure-proxy.md \
   --release 21.0 \
   --update-manifests
 ```
@@ -73,8 +73,18 @@ npm run build
 Create a release-specific topic variant:
 
 ```sh
-npm run create:topic-variant -- --from-topic NET-PROXY-TASK-001 --release 21.0 --update-manifests
+npm run create:topic-variant -- --from-file topics/configure-proxy.md --release 21.0 --update-manifests
 ```
+
+Create a variant from VS Code:
+
+1. Open `tools/vscode-topic-variant` in VS Code.
+2. Press `F5` to launch an Extension Development Host.
+3. In the Extension Development Host, open this repository.
+4. Right-click a Markdown file under `topics/`.
+5. Select **Create Topic Variant**.
+
+The VS Code command passes the selected file to the same script through `--from-file`, so it uses the same validation and concurrent-writer rules as the command line.
 
 Check changed topics against a publish ledger:
 
