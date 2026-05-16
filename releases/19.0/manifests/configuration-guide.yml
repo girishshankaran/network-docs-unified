@@ -9,7 +9,7 @@ sections:
     topics: ["NET-STATIC-ROUTES-TASK-001"]
   - id: network-services
     title: Network services
-    topics: ["NET-DNS-TASK-001"]
+    topics: ["NET-DNS-TASK-002"]
   - id: monitoring
     title: Monitoring configuration
     topics: ["NET-SNMP-TASK-001"]
