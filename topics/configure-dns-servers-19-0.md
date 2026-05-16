@@ -24,7 +24,7 @@ retrieval:
   dedupe_key: "configure-dns-servers"
   allow_in_ai_results: true
 ---
-# Configure DNS servers
+# Configure DNS servers (new one for 19.0 from branch c)
 
 Use this procedure to configure DNS servers for router hostname resolution.
 
