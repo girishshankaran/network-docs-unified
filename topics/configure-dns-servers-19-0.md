@@ -1,30 +1,29 @@
 ---
-topic_id: NET-DNS-TASK-001
-title: Configure DNS servers
-short_title: Configure DNS servers
-summary: Configure DNS servers so routers can resolve hostnames for management and service integrations.
-product: Cisco Router Operations Manager
-platform: IOS-XR routers
-content_type: task
+topic_id: NET-DNS-TASK-002
+title: "Configure DNS servers"
+short_title: "Configure DNS servers"
+summary: "Configure DNS servers so routers can resolve hostnames for management and service integrations."
+product: "Cisco Router Operations Manager"
+platform: "IOS-XR routers"
+content_type: "task"
 audience: ["network-operations", "platform-admin"]
-estimated_time: 8 minutes
+estimated_time: "8 minutes"
 permissions: ["administrator"]
 tags: ["dns", "network-services", "configuration"]
-owner: Network Docs
+owner: "Network Docs"
 last_reviewed: "2026-05-02"
 lifecycle:
   introduced_in: "19.0"
   updated_in: []
   deprecated_in: null
-  status: replaced
-  replaced_by: NET-DNS-TASK-002
-  applies_to: ["19.0"]
+  status: active
+  replaced_by: null
+  applies_to: ["19.0", "20.0", "21.0"]
 retrieval:
   is_canonical: true
-  dedupe_key: configure-dns-servers
+  dedupe_key: "configure-dns-servers"
   allow_in_ai_results: true
 ---
-
 # Configure DNS servers
 
 Use this procedure to configure DNS servers for router hostname resolution.
