@@ -16,9 +16,8 @@ lifecycle:
   introduced_in: "21.0"
   updated_in: []
   deprecated_in: null
-  status: replaced
-  replaced_by: NET-AUTHENTICATE-USERS-TASK-002
-  applies_to: ["20.0"]
+  status: active
+  applies_to: ["21.0"]
 retrieval:
   is_canonical: true
   dedupe_key: "configure-auth-in-your-routers"

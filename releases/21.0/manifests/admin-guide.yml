@@ -21,7 +21,7 @@ sections:
     topics: ["NET-CREATE-PUBLISH-API-TASK-002"]
   - id: authenticate
     title: Authenticate
-    topics: ["NET-AUTHENTICATE-USERS-TASK-003"]
+    topics: ["NET-AUTHENTICATE-USERS-TASK-001"]
   - id: authenticate-switch
     title: Authenticate switch
     topics: ["NET-SWITCH-AUTHENTICATION-TASK-001"]
