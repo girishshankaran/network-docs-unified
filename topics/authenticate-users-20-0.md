@@ -16,8 +16,8 @@ lifecycle:
   introduced_in: "20.0"
   updated_in: []
   deprecated_in: null
-  status: replaced
-  replaced_by: NET-AUTHENTICATE-USERS-TASK-003
+  status: active
+  replaced_by: null
   applies_to: ["20.0"]
 retrieval:
   is_canonical: true
